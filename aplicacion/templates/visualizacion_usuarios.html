@@ -1,0 +1,194 @@
+$def with (usuarios)
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vínculo de Vida - Gestión de Usuarios</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Font Awesome para los iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        /* Estilos personalizados para la tipografía */
+        body {
+            font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+    </style>
+</head>
+<body class="bg-[#FDF4F7] text-gray-800 font-sans min-h-screen flex flex-col items-center">
+
+    <div class="min-h-screen p-4 sm:p-6 lg:p-8 w-full">
+        <!-- Encabezado de la página -->
+        <header class="bg-[#E1A6CD] shadow-md rounded-lg p-3 mb-8 w-full">
+            <div class="container mx-auto flex justify-between items-center">
+                
+                <!-- Menú desplegable a la izquierda -->
+                <div class="relative group" id="menu-container">
+                    <!-- Botón del menú desplegable -->
+                    <button id="menu-button" class="text-[#4A4A4A] text-lg font-bold focus:outline-none flex items-center p-2 rounded-md transition-colors duration-200 group-hover:bg-pink-100">
+                        ADMINISTRADOR
+                        <i class="fas fa-chevron-down ml-2 text-sm transition-transform duration-300 group-hover:rotate-180"></i>
+                    </button>
+                    <!-- Contenido del menú desplegable -->
+                    <ul id="dropdown-menu" class="hidden group-hover:block absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-10 py-2">
+                        <li><a href="/admin_dashboard" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Ver Panel</a></li>
+                        <li><a href="/admin_reportes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Generar Reporte</a></li>
+                        <li><a href="/admin_configuracion" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Configuración</a></li>
+                        <!-- Enlace con estilo activo para la página actual -->
+                        <li><a href="/visualizacion_usuarios" class="block px-4 py-2 text-[#6A003F] font-semibold bg-gray-100">Visualización de Usuarios</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Enlace de Cerrar Sesión a la derecha -->
+                <a href="/logout" class="flex items-center text-[#6a003f] font-bold px-4 py-2 rounded-full space-x-2 bg-white border border-[#E1A6CD] hover:bg-gray-100 transition-colors duration-200" title="Cerrar Sesión">
+                    <div class="w-8 h-8 rounded-full border-2 border-[#6a003f] bg-white flex items-center justify-center">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </div>
+                    <span class="hidden sm:block">Cerrar Sesión</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Contenedor principal del contenido -->
+        <main class="flex-grow flex flex-col items-center justify-center w-full px-4 sm:px-6 lg:px-8 py-8">
+            <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg max-w-4xl w-full relative">
+                <!-- Flecha de regreso en el borde izquierdo -->
+                <a href="javascript:history.back()" class="absolute left-8 top-8 text-[#6a003f] text-3xl hover:text-[#E1A6CD] transition-colors duration-200" title="Regresar">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                
+                <h1 class="text-2xl sm:text-3xl font-bold text-center mb-10 text-[#6a003f]">Visualización de Usuarios</h1>
+                
+                <!-- Barra de búsqueda -->
+                <div class="flex justify-center mb-6">
+                    <div class="relative w-full max-w-sm">
+                        <input type="text" id="search-input-usuarios" placeholder="Buscar por nombre..." class="w-full pl-10 pr-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors">
+                        <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenedor de la tabla para hacerla responsiva -->
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse mt-4">
+                        <thead>
+                            <tr>
+                                <th class="bg-[#f7e0e7] text-[#6a003f] font-bold text-left p-4 text-sm uppercase rounded-tl-lg">ID</th>
+                                <th class="bg-[#f7e0e7] text-[#6a003f] font-bold text-left p-4 text-sm uppercase">Rol</th>
+                                <th class="bg-[#f7e0e7] text-[#6a003f] font-bold text-left p-4 text-sm uppercase">Nombre</th>
+                                <th class="bg-[#f7e0e7] text-[#6a003f] font-bold text-center p-4 text-sm uppercase rounded-tr-lg">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body-usuarios">
+                            <!-- Bucle para mostrar usuarios dinámicamente -->
+                            $for usuario in usuarios:
+                            <tr class="border-b border-[#E4B4C5]">
+                                <td class="py-3 px-4">
+                                    <!-- Enlace al perfil del usuario por su ID -->
+                                    <a href="/perfil_usuario?id=$usuario['id_usuario']" class="text-[#6A003F] hover:text-[#E1A6CD] transition-colors">$usuario['id_usuario']</a>
+                                </td>
+                                <td class="py-3 px-4">$usuario['rol']</td>
+                                <td class="py-3 px-4">
+                                    <!-- Enlace al perfil del usuario por su nombre -->
+                                    <a href="/perfil_usuario?id=$usuario['id_usuario']" class="text-[#6A003F] hover:text-[#E1A6CD] transition-colors">$usuario['nombre']</a>
+                                </td>
+                                <td class="py-3 px-4 text-center flex justify-center items-center gap-2">
+                                    <!-- Botón para ver el perfil -->
+                                    <a href="/perfil_usuario?id=$usuario['id_usuario']" class="view-button bg-[#F8C9D9] text-[#6A003F] hover:bg-[#E4B4C5] p-2 rounded-full w-10 h-10 transition-all duration-200 shadow-md transform hover:scale-110" title="Ver Perfil">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <!-- Botón para inhabilitar (eliminar) -->
+                                    <button class="delete-button bg-red-200 text-red-700 hover:bg-red-300 p-2 rounded-full w-10 h-10 transition-all duration-200 shadow-md transform hover:scale-110" title="Inhabilitar">
+                                        <i class="fas fa-user-slash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            $if not usuarios:
+                                <tr class="border-b border-[#E4B4C5]">
+                                    <td colspan="4" class="text-center py-4 text-gray-500">No hay usuarios registrados.</td>
+                                </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para confirmar eliminación -->
+    <div id="delete-modal-usuarios" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full text-center">
+            <h3 class="text-lg font-bold mb-4">Confirmar Inhabilitación</h3>
+            <p class="mb-6">¿Estás seguro de que deseas inhabilitar a este usuario?</p>
+            <div class="flex justify-center space-x-4">
+                <button id="cancel-delete-usuarios" class="px-6 py-2 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
+                    Cancelar
+                </button>
+                <button id="confirm-delete-usuarios" class="px-6 py-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
+                    Inhabilitar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script para la funcionalidad -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('search-input-usuarios');
+            const tableBody = document.getElementById('table-body-usuarios');
+            const deleteModal = document.getElementById('delete-modal-usuarios');
+            const confirmDeleteButton = document.getElementById('confirm-delete-usuarios');
+            const cancelDeleteButton = document.getElementById('cancel-delete-usuarios');
+
+            let rowToDelete = null;
+
+            // Función para filtrar la tabla al escribir en la barra de búsqueda
+            searchInput.addEventListener('input', (event) => {
+                const searchTerm = event.target.value.toLowerCase();
+                const rows = tableBody.querySelectorAll('tr');
+
+                rows.forEach(row => {
+                    // El nombre del usuario está en la tercera celda (índice 2)
+                    const userName = row.cells[2].textContent.toLowerCase();
+
+                    if (userName.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+
+            // Evento para abrir el modal de eliminación (inhabilitación)
+            tableBody.addEventListener('click', (event) => {
+                const deleteButton = event.target.closest('.delete-button');
+                if (deleteButton) {
+                    const row = deleteButton.closest('tr');
+                    rowToDelete = row;
+                    deleteModal.classList.remove('hidden');
+                    deleteModal.classList.add('flex');
+                }
+            });
+
+            // Evento para confirmar la eliminación (inhabilitación)
+            confirmDeleteButton.addEventListener('click', () => {
+                if (rowToDelete) {
+                    rowToDelete.remove();
+                    rowToDelete = null;
+                    // Aquí puedes añadir la lógica para enviar una solicitud al servidor para inhabilitar el registro
+                }
+                deleteModal.classList.remove('flex');
+                deleteModal.classList.add('hidden');
+            });
+
+            // Evento para cancelar la eliminación (inhabilitación)
+            cancelDeleteButton.addEventListener('click', () => {
+                deleteModal.classList.remove('flex');
+                deleteModal.classList.add('hidden');
+                rowToDelete = null;
+            });
+        });
+    </script>
+</body>
+</html>

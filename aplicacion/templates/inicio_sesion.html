@@ -1,0 +1,57 @@
+$def with (message)
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vínculo de Vida - Iniciar Sesión</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Font Awesome para los iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Estilos personalizados para la tipografía Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-[#FEE7EF] text-[#4a4a4a] flex flex-col min-h-screen">
+
+    <main class="flex-grow flex items-center justify-center p-4 sm:p-8">
+        <div class="flex flex-col md:flex-row bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden">
+            <!-- Sección de la imagen (lado izquierdo) -->
+            <div class="md:w-1/2 p-6 md:p-0 flex items-center justify-center bg-[#F8C9D9]">
+                <img src="/aplicacion/imagenes/inicio_sesion.jpg" alt="Imagen representativa de la lactancia" class="rounded-lg shadow-lg mb-6 w-full max-w-lg mx-auto">
+            </div>
+            
+            <!-- Sección del formulario de inicio de sesión (lado derecho) -->
+            <div class="md:w-1/2 p-8 sm:p-12 lg:p-16 flex flex-col justify-center items-center text-center bg-[#FEE7EF]">
+                <h2 class="text-[#6A003F] text-3xl sm:text-4xl font-extrabold mb-8 uppercase">VÍNCULO DE VIDA</h2>
+                
+                <!-- Mensaje de error, si existe -->
+                $if message:
+                    <p class="text-red-500 font-medium mb-4">$message</p>
+
+                <!-- Formulario de inicio de sesión -->
+                <form method="post" action="/login" class="w-full max-w-sm">
+                    <div class="mb-6 flex items-center bg-white rounded-full shadow-md px-5 py-3 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#F8C9D9]">
+                        <i class="fas fa-user text-[#6A003F] text-xl"></i>
+                        <input type="text" placeholder="Usuario" name="username" class="flex-grow ml-4 border-none outline-none text-lg bg-transparent placeholder-gray-400">
+                    </div>
+                    
+                    <div class="mb-8 flex items-center bg-white rounded-full shadow-md px-5 py-3 transition-all duration-300 focus-within:ring-2 focus-within:ring-[#F8C9D9]">
+                        <i class="fas fa-lock text-[#6A003F] text-xl"></i>
+                        <input type="password" placeholder="Contraseña" name="password" class="flex-grow ml-4 border-none outline-none text-lg bg-transparent placeholder-gray-400">
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-[#F8C9D9] text-[#6A003F] font-bold text-lg py-3 rounded-full shadow-lg hover:bg-[#E4B4C5] transition-colors duration-300">
+                        Iniciar Sesión
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Usuario</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Font Awesome para los iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        /* Estilos personalizados para la tipografía */
+        body {
+            font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+    </style>
+</head>
+<body class="bg-[#FDF4F7] text-gray-800 font-sans min-h-screen flex flex-col items-center">
+
+    <div class="min-h-screen p-4 sm:p-6 lg:p-8 w-full">
+        <!-- Encabezado de la página -->
+        <header class="bg-[#E1A6CD] shadow-md rounded-lg p-3 mb-8 w-full">
+            <div class="container mx-auto flex justify-between items-center">
+                
+                <!-- Menú desplegable a la izquierda -->
+                <div class="relative group" id="menu-container">
+                    <!-- Botón del menú desplegable -->
+                    <button id="menu-button" class="text-[#4A4A4A] text-lg font-bold focus:outline-none flex items-center p-2 rounded-md transition-colors duration-200 group-hover:bg-pink-100">
+                        ADMINISTRADOR
+                        <i class="fas fa-chevron-down ml-2 text-sm transition-transform duration-300 group-hover:rotate-180"></i>
+                    </button>
+                    <!-- Contenido del menú desplegable -->
+                    <ul id="dropdown-menu" class="hidden group-hover:block absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-10 py-2">
+                        <li><a href="/administrador" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Bienvenido</a></li>
+                        <li><a href="/administrador_registrar_usuario" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Creación de Usuarios</a></li>
+                        <li><a href="/administrador_ver_usuarios" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de Usuarios</a></li>
+                        <li><a href="/enfermeras" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Área de Enfermeras</a></li>
+                        <li><a href="/registro_lactantes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registro de Lactantes</a></li>
+                        <li><a href="/registro_citas" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registro de Citas</a></li>
+                        <li><a href="/visualizacion_citas" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de Citas</a></li>
+                        <li><a href="/visualizacion_lactantes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de Lactantes</a></li>
+                        <li><a href="/reportes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Creación de Reportes</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Enlace de Cerrar Sesión a la derecha -->
+                <a href="/logout" class="flex items-center text-[#6a003f] font-bold px-4 py-2 rounded-full space-x-2 bg-white border border-[#E1A6CD] hover:bg-gray-100 transition-colors duration-200" title="Cerrar Sesión">
+                    <div class="w-8 h-8 rounded-full border-2 border-[#6a003f] bg-white flex items-center justify-center">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </div>
+                    <span class="hidden sm:block">Cerrar Sesión</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Contenedor principal del formulario -->
+        <main class="flex-grow flex items-center justify-center w-full px-4 sm:px-6 lg:px-8">
+            <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg max-w-4xl w-full relative">
+                <!-- Flecha de regreso en el borde izquierdo -->
+                <a href="#" class="absolute left-8 top-8 text-[#6a003f] text-3xl hover:text-[#E1A6CD] transition-colors duration-200" title="Regresar">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                
+                <!-- Título centrado -->
+                <h2 class="text-3xl font-bold text-[#6a003f] text-center mb-6">Registro de Usuario</h2>
+                
+                <form id="registration-form" class="space-y-6">
+                    <!-- Fila 1: Nombres y Apellidos -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div>
+                            <label for="nombre" class="block text-left font-semibold text-[#6a003f] mb-2">Nombre</label>
+                            <input type="text" id="nombre" name="nombre" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD]">
+                        </div>
+                        <div>
+                            <label for="primer-apellido" class="block text-left font-semibold text-[#6a003f] mb-2">Primer apellido</label>
+                            <input type="text" id="primer-apellido" name="primerApellido" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD]">
+                        </div>
+                        <div>
+                            <label for="segundo-apellido" class="block text-left font-semibold text-[#6a003f] mb-2">Segundo apellido</label>
+                            <input type="text" id="segundo-apellido" name="segundoApellido" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD]">
+                        </div>
+                    </div>
+                    <!-- Fila 2: Rol, Contraseña y Verificación -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div>
+                            <label for="role" class="block text-left font-semibold text-[#6a003f] mb-2">Rol</label>
+                            <div class="relative">
+                                <select id="role" name="role" required class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD] appearance-none">
+                                    <option value="enfermera">Enfermera</option>
+                                    <option value="administrador">Administrador</option>
+                                </select>
+                                <i class="fas fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-[#6a003f] pointer-events-none"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="password" class="block text-left font-semibold text-[#6a003f] mb-2">Contraseña</label>
+                            <input type="password" id="password" name="password" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD]">
+                        </div>
+                        <div>
+                            <label for="verify-password" class="block text-left font-semibold text-[#6a003f] mb-2">Verificar contraseña</label>
+                            <input type="password" id="verify-password" name="verifyPassword" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD]">
+                        </div>
+                    </div>
+                    <!-- Botón de envío -->
+                    <div>
+                        <button type="submit" class="w-full mt-4 px-6 py-3 bg-[#E6C5D4] text-[#6A003F] font-bold rounded-lg shadow-md hover:bg-[#E4B4C5] transition-colors duration-200">
+                            Registrar Usuario
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+        
+        <!-- Pie de página -->
+        <footer class="w-full text-center py-4 text-[#6a003f] bg-[#fce8ee] mt-auto">
+            <!-- La frase ha sido eliminada. -->
+        </footer>
+    </div>
+
+    <!-- Script para la funcionalidad del menú desplegable -->
+    <script>
+        const menuButton = document.getElementById('menu-button');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        const menuContainer = document.getElementById('menu-container');
+
+        menuButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            dropdownMenu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!menuContainer.contains(event.target)) {
+                dropdownMenu.classList.add('hidden');
+            }
+        });
+    </script>
+
+</body>
+</html>
