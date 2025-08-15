@@ -216,7 +216,7 @@ web.config.debug = False
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 render = web.template.render(template_dir)
 
-# --- 2. Definición de URLs y Mapeo de Clases ---
+# 2. Definición de URLs y Mapeo de Clases 
 urls = (
     '/', 'Welcome',
     '/login', 'Login',
@@ -233,11 +233,9 @@ urls = (
     '/reportes_generales', 'ReportesGenerales',
     '/reportes_por_lactante', 'ReportesPorLactante',
     '/api/generate_report', 'ReportesAPI',
-    # Ruta de prueba temporal para verificar el motor de renderizado
-    '/test', 'TestRender' 
 )
 
-# --- 3. Decorador para requerir un rol específico ---
+# Decorador para requerir un rol específico 
 def rol_requerido(*roles_permitidos):
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -249,16 +247,11 @@ def rol_requerido(*roles_permitidos):
         return wrapper
     return decorator
 
-# --- 4. Clases del Manejador de Solicitudes (Lógica de la Aplicación) ---
+# Clases del Manejador de Solicitudes (Lógica de la Aplicación) 
 class Welcome:
     def GET(self):
         return render.index()
     
-# Clase de prueba para el motor de renderizado
-class TestRender:
-    def GET(self):
-        return "<h1>¡El servidor está funcionando!</h1><p>Si ves este mensaje, la ruta y el renderizado básico funcionan.</p>"
-
 class Login:
     def GET(self):
         return render.inicio_sesion(message="")
