@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vínculo de Vida - Registro de Citas</title>
-    <!-- Carga de Tailwind CSS -->
+    <!-- Carga de Tailwind CSS para los estilos -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Carga de Font Awesome para los iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -12,6 +12,47 @@
         /* Estilos personalizados para la tipografía */
         body {
             font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+
+        /* Estilos para la ventana modal (mensaje de éxito/error) */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 1rem;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        /* Estilo para el spinner de carga */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #6A003F; /* Color que coincide con el tema */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -21,7 +62,7 @@
         <!-- Encabezado de la página -->
         <header class="bg-[#E1A6CD] shadow-md rounded-lg p-3 mb-8 w-full">
             <div class="container mx-auto flex justify-between items-center">
-                
+
                 <!-- Menú desplegable a la izquierda -->
                 <div class="relative group" id="menu-container">
                     <button id="menu-button" class="text-[#4A4A4A] text-lg font-bold focus:outline-none flex items-center p-2 rounded-md transition-colors duration-200 group-hover:bg-pink-100">
@@ -34,7 +75,7 @@
                         <li><a href="/enfermeras_reportes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Creación de reportes</a></li>
                     </ul>
                 </div>
-                
+
                 <!-- Enlace de Cerrar Sesión a la derecha -->
                 <a href="/logout" class="flex items-center text-[#6a003f] font-bold px-4 py-2 rounded-full space-x-2 bg-white border border-[#E1A6CD] hover:bg-gray-100 transition-colors duration-200" title="Cerrar Sesión">
                     <div class="w-8 h-8 rounded-full border-2 border-[#6a003f] bg-white flex items-center justify-center">
@@ -49,14 +90,13 @@
         <main class="flex-grow flex items-center justify-center w-full px-4 sm:px-6 lg:px-8">
             <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg max-w-4xl w-full relative">
                 <!-- Flecha de regreso en el borde izquierdo -->
-                <!-- La URL de este enlace se establecerá con JavaScript -->
                 <a id="back-button" href="#" class="absolute left-8 top-8 text-[#6a003f] text-3xl hover:text-[#E1A6CD] transition-colors duration-200" title="Regresar">
                     <i class="fas fa-arrow-left"></i>
                 </a>
-                
+
                 <!-- Título centrado -->
                 <h2 class="text-2xl sm:text-3xl font-bold text-center mb-10 text-[#6a003f]">Registro de citas</h2>
-                
+
                 <form id="registro-citas-form" class="space-y-8">
                     <!-- Sección de la Madre -->
                     <div>
@@ -64,28 +104,27 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div class="col-span-1">
                                 <label for="madre-nombre" class="sr-only">Nombre de la madre</label>
-                                <input id="madre-nombre" type="text" placeholder="Nombre de la madre" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
+                                <input id="madre-nombre" name="nombre_madre" type="text" placeholder="Nombre de la madre" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
                             </div>
                             <div class="col-span-1">
                                 <label for="madre-apellido1" class="sr-only">Primer apellido</label>
-                                <input id="madre-apellido1" type="text" placeholder="Primer apellido" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
+                                <input id="madre-apellido1" name="apellido_paterno_madre" type="text" placeholder="Primer apellido" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
                             </div>
                             <div class="col-span-1">
                                 <label for="madre-apellido2" class="sr-only">Segundo apellido</label>
-                                <input id="madre-apellido2" type="text" placeholder="Segundo apellido" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
+                                <input id="madre-apellido2" name="apellido_materno_madre" type="text" placeholder="Segundo apellido" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
                             </div>
                             <div class="col-span-1">
                                 <label for="hora-llegada" class="sr-only">Hora de llegada</label>
-                                <input id="hora-llegada" type="text" placeholder="Hora de llegada" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
+                                <input id="hora-llegada" name="hora_llegada" type="time" placeholder="Hora de llegada" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
                             </div>
                             <div class="col-span-1 relative">
                                 <label for="madre-discapacidad" class="sr-only">Discapacidad de la madre</label>
-                                <select id="madre-discapacidad" name="discapacidad_madre" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200 appearance-none">
+                                <select id="madre-discapacidad" name="discapacidad_madre" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200 appearance-none">
                                     <option value="">Discapacidad</option>
-                                    <option value="si">Sí</option>
                                     <option value="no">No</option>
-                                    <option value="visual">Visual</option>
                                     <option value="auditiva">Auditiva</option>
+                                    <option value="visual">Visual</option>
                                     <option value="motriz">Motriz</option>
                                     <option value="intelectual">Intelectual</option>
                                     <option value="otra">Otra</option>
@@ -111,18 +150,19 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div class="col-span-1">
                                 <label for="lactante-apellido1" class="sr-only">Primer apellido</label>
-                                <input id="lactante-apellido1" type="text" placeholder="Primer apellido" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
+                                <input id="lactante-apellido1" name="apellido_paterno_lactante" type="text" placeholder="Primer apellido" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
                             </div>
                             <div class="col-span-1">
                                 <label for="lactante-apellido2" class="sr-only">Segundo apellido</label>
-                                <input id="lactante-apellido2" type="text" placeholder="Segundo apellido" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
+                                <input id="lactante-apellido2" name="apellido_materno_lactante" type="text" placeholder="Segundo apellido" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200">
                             </div>
                             <div class="col-span-1 relative">
                                 <label for="lactante-discapacidad" class="sr-only">Discapacidad del lactante</label>
-                                <select id="lactante-discapacidad" name="discapacidad_lactante" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200 appearance-none">
+                                <select id="lactante-discapacidad" name="discapacidad_lactante" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors duration-200 appearance-none">
                                     <option value="">Discapacidad</option>
-                                    <option value="visual">Visual</option>
+                                    <option value="no">No</option>
                                     <option value="auditiva">Auditiva</option>
+                                    <option value="visual">Visual</option>
                                     <option value="motriz">Motriz</option>
                                     <option value="otra">Otra</option>
                                 </select>
@@ -132,10 +172,11 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="text-center mt-10">
-                        <button type="submit" class="w-full sm:w-1/2 md:w-1/3 py-3 mt-6 bg-[#F8C9D9] text-[#6A003F] font-bold rounded-full shadow-md transition-colors duration-200 hover:bg-[#E4B4C5] transform hover:scale-105">
-                            Crear registro
+                        <button type="submit" id="submit-button" class="w-full sm:w-1/2 md:w-1/3 py-3 mt-6 bg-[#F8C9D9] text-[#6A003F] font-bold rounded-full shadow-md transition-colors duration-200 hover:bg-[#E4B4C5] transform hover:scale-105" disabled>
+                            <span id="button-text">Crear registro</span>
+                            <div id="button-loader" class="loader ml-3 hidden"></div>
                         </button>
                     </div>
                 </form>
@@ -144,12 +185,142 @@
 
         <!-- Pie de página -->
         <footer class="w-full text-center py-4 text-[#6a003f] bg-[#fce8ee] mt-auto">
-            <!-- La frase ha sido eliminada. -->
         </footer>
     </div>
 
-    <!-- Script para la funcionalidad del menú desplegable -->
-    <script>
+    <!-- Modal window for messages -->
+    <div id="message-modal" class="modal">
+        <div class="modal-content">
+            <p id="modal-message" class="text-lg text-gray-800 mb-4"></p>
+            <button id="modal-close-button" class="px-4 py-2 bg-[#E6C5D4] text-[#6A003F] font-bold rounded-lg hover:bg-[#E4B4C5]">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Carga de las SDK de Firebase de la versión modular -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variables globales de la plataforma
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Elementos del DOM
+        const appointmentForm = document.getElementById('registro-citas-form');
+        const madreNombreInput = document.getElementById('madre-nombre');
+        const madreApellido1Input = document.getElementById('madre-apellido1');
+        const madreApellido2Input = document.getElementById('madre-apellido2');
+        const horaLlegadaInput = document.getElementById('hora-llegada');
+        const madreDiscapacidadInput = document.getElementById('madre-discapacidad');
+        const lactanteApellido1Input = document.getElementById('lactante-apellido1');
+        const lactanteApellido2Input = document.getElementById('lactante-apellido2');
+        const lactanteDiscapacidadInput = document.getElementById('lactante-discapacidad');
+
+        const messageModal = document.getElementById('message-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseButton = document.getElementById('modal-close-button');
+        const submitButton = document.getElementById('submit-button');
+        const buttonText = document.getElementById('button-text');
+        const buttonLoader = document.getElementById('button-loader');
+        
+        // Función para mostrar la ventana modal con un mensaje
+        const showModal = (message) => {
+            modalMessage.textContent = message;
+            messageModal.style.display = 'flex';
+        };
+
+        // Manejador del clic para cerrar la ventana modal
+        modalCloseButton.addEventListener('click', () => {
+            messageModal.style.display = 'none';
+        });
+
+        // Toggle del estado de carga en el botón de envío
+        const setLoading = (isLoading) => {
+            if (isLoading) {
+                submitButton.disabled = true;
+                buttonText.textContent = 'Registrando...';
+                buttonLoader.classList.remove('hidden');
+                submitButton.classList.add('flex', 'items-center', 'justify-center');
+            } else {
+                submitButton.disabled = false;
+                buttonText.textContent = 'Crear registro';
+                buttonLoader.classList.add('hidden');
+            }
+        };
+
+        // Inicializar la aplicación y los servicios de Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        let userId = null;
+
+        // Escucha los cambios en el estado de autenticación para obtener el ID de usuario
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                console.log('Usuario autenticado con ID:', userId);
+                setLoading(false); // Habilita el formulario después de la autenticación
+            } else {
+                // Si no está autenticado, inicia sesión
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error('Error de autenticación:', error);
+                    showModal('Error al autenticar. Por favor, recarga la página.');
+                }
+            }
+        });
+        
+        // Manejador del envío del formulario
+        appointmentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!userId) {
+                showModal('Error: No se pudo obtener la ID de usuario. Por favor, recarga la página.');
+                return;
+            }
+            
+            setLoading(true);
+            
+            try {
+                // Prepara los datos para guardar en Firestore
+                const citaData = {
+                    nombreMadre: madreNombreInput.value.trim(),
+                    apellidoPaternoMadre: madreApellido1Input.value.trim(),
+                    apellidoMaternoMadre: madreApellido2Input.value.trim(),
+                    horaLlegada: horaLlegadaInput.value,
+                    discapacidadMadre: madreDiscapacidadInput.value,
+                    apellidoPaternoLactante: lactanteApellido1Input.value.trim(),
+                    apellidoMaternoLactante: lactanteApellido2Input.value.trim(),
+                    discapacidadLactante: lactanteDiscapacidadInput.value,
+                    createdAt: serverTimestamp()
+                };
+
+                // Guarda la cita en la colección 'citas'
+                const citasCollectionRef = collection(db, `artifacts/${appId}/public/data/citas`);
+                await addDoc(citasCollectionRef, citaData);
+
+                // Muestra un mensaje de éxito
+                showModal('Cita registrada con éxito!');
+
+                // Limpia el formulario
+                appointmentForm.reset();
+
+            } catch (error) {
+                console.error('Error al registrar la cita:', error);
+                showModal(`Ocurrió un error al registrar la cita: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Funcionalidad para el menú desplegable
         const menuButton = document.getElementById('menu-button');
         const dropdownMenu = document.getElementById('dropdown-menu');
         const menuContainer = document.getElementById('menu-container');

@@ -9,7 +9,30 @@ import sqlite3
 import hashlib
 import datetime
 
-# --- 1. Configuración de la base de datos SQLite3 ---
+web.config.debug = False
+template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+render = web.template.render(template_dir)
+
+# --- 1. Definición de URLs y Mapeo de Clases ---
+urls = (
+    '/', 'Welcome',
+    '/login', 'Login',
+    '/logout', 'Logout',
+    '/administrador', 'AdminArea',
+    '/administrador_registrar_usuario', 'RegistroUsuario',
+    '/enfermeras', 'EnfermerasArea',
+    '/registro_citas', 'RegistroCitas',
+    '/registro_lactantes', 'RegistroLactantes',
+    '/reportes', 'ReportesArea',
+    '/reportes_generales', 'ReportesGenerales',
+    '/reportes_por_lactante', 'ReportesPorLactante',
+    '/visualizacion_citas', 'VisualizacionCitas',
+    '/visualizacion_lactantes', 'VisualizacionLactantes',
+    '/visualizacion_usuarios', 'VisualizacionUsuarios',
+    '/api/generate_report', 'ReportesAPI',
+)
+
+# --- 2. Configuración de la base de datos SQLite3 ---
 DB_FILE = 'vinculo_de_vida.db'
 
 def get_db():
@@ -146,8 +169,11 @@ def setup_database():
             "INSERT OR IGNORE INTO Motivo (nombre, tipo_de_motivo) VALUES ('Chequeo de rutina', 'Control');",
             "INSERT OR IGNORE INTO Motivo (nombre, tipo_de_motivo) VALUES ('Donación de leche', 'Lactancia Materna');",
             "INSERT OR IGNORE INTO Motivo (nombre, tipo_de_motivo) VALUES ('Lactancia Materna', 'Apoyo');",
-            "INSERT OR IGNORE INTO Area (nombre, tipo_de_area) VALUES ('Enfermería 1', 'Médica');",
-            "INSERT OR IGNORE INTO Area (nombre, tipo_de_area) VALUES ('Pediatría', 'Médica');",
+            "INSERT OR IGNORE INTO Area (nombre, tipo_de_area) VALUES ('UCIN', 'Médica');",
+            "INSERT OR IGNORE INTO Area (nombre, tipo_de_area) VALUES ('UTIN', 'Médica');",
+            "INSERT OR IGNORE INTO Area (nombre, tipo_de_area) VALUES ('Crecimiento y desarrollo', 'Médica');",
+            "INSERT OR IGNORE INTO Area (nombre, tipo_de_area) VALUES ('Foraneos', 'No Médica');",
+            "INSERT OR IGNORE INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES ('Desconocida', 'Desconocido', 'Desconocido', 'Ninguna', 1);",
             f"""
             INSERT OR IGNORE INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES (
                 'Admin', '555-0000', '{contrasena_admin_hash}', (SELECT id_rol FROM Rol WHERE nombre = 'Administrador')
@@ -171,7 +197,7 @@ def setup_database():
             """
             INSERT OR IGNORE INTO Lactantes (id_madres, id_area, apellido_paterno, apellido_materno, fecha_nacimiento, genero, estado, discapacidad) VALUES (
                 (SELECT id_madre FROM Madres WHERE nombre = 'Juana'), 
-                (SELECT id_area FROM Area WHERE nombre = 'Enfermería 1'),
+                (SELECT id_area FROM Area WHERE nombre = 'UCIN'),
                 'Pérez',
                 'Gómez',
                 '2024-01-15', 
@@ -212,46 +238,32 @@ def setup_database():
             conn.close()
             print("Conexión de configuración cerrada.")
 
-web.config.debug = False
-template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-render = web.template.render(template_dir)
-
-# 2. Definición de URLs y Mapeo de Clases 
-urls = (
-    '/', 'Welcome',
-    '/login', 'Login',
-    '/logout', 'Logout',
-    '/administrador', 'AdministradorArea',
-    '/administrador_registrar_usuario', 'AdministradorRegistrarUsuario',
-    '/visualizacion_usuarios', 'AdministradorVerUsuarios',
-    '/visualizacion_citas', 'AdministradorVerCitas',
-    '/visualizacion_lactantes', 'AdministradorVerLactantes',
-    '/enfermeras', 'EnfermerasArea',
-    '/registro_lactantes', 'RegistroLactantes',
-    '/registro_citas', 'RegistroCitas',
-    '/reportes', 'ReportesArea',
-    '/reportes_generales', 'ReportesGenerales',
-    '/reportes_por_lactante', 'ReportesPorLactante',
-    '/api/generate_report', 'ReportesAPI',
-)
-
-# Decorador para requerir un rol específico 
+# --- 3. Decorador para requerir un rol específico (refactorizado para usar nombres) ---
 def rol_requerido(*roles_permitidos):
     def decorator(func):
         def wrapper(*args, **kwargs):
-            rol_usuario = web.ctx.session.get('rol_id')
+            rol_usuario = web.ctx.session.get('rol_nombre')
             if rol_usuario in roles_permitidos:
                 return func(*args, **kwargs)
             else:
-                raise web.seeother('/login')
+                # Si no está logeado, redirigir al login
+                if not web.ctx.session.get('loggedin'):
+                    raise web.seeother('/login')
+                # Si está logeado pero no tiene el rol, redirigir al área apropiada
+                elif rol_usuario == 'Administrador':
+                    raise web.seeother('/administrador')
+                elif rol_usuario == 'Enfermera':
+                    raise web.seeother('/enfermeras')
+                else:
+                    raise web.seeother('/login')
         return wrapper
     return decorator
 
-# Clases del Manejador de Solicitudes (Lógica de la Aplicación) 
+# --- 4. Clases del Manejador de Solicitudes (Lógica de la Aplicación) ---
 class Welcome:
     def GET(self):
         return render.index()
-    
+
 class Login:
     def GET(self):
         return render.inicio_sesion(message="")
@@ -269,20 +281,24 @@ class Login:
         
         password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
 
-        query = "SELECT id_usuario, id_rol, contraseña FROM Usuarios WHERE nombre = ?;"
+        # Se obtiene el nombre del rol en lugar del ID
+        query = """
+            SELECT T1.id_usuario, T2.nombre as rol_nombre, T1.contraseña
+            FROM Usuarios AS T1
+            JOIN Rol AS T2 ON T1.id_rol = T2.id_rol
+            WHERE T1.nombre = ?;
+        """
         user = cursor.execute(query, (username,)).fetchone()
         
-        if user:
-            if password_hash == user['contraseña']:
-                web.ctx.session.loggedin = True
-                web.ctx.session.rol_id = user['id_rol']
-                
-                if user['id_rol'] == 1:
-                    raise web.seeother('/administrador')
-                elif user['id_rol'] == 2:
-                    raise web.seeother('/enfermeras')
-            else:
-                return render.inicio_sesion(message="Nombre de usuario o contraseña incorrectos.")
+        if user and password_hash == user['contraseña']:
+            web.ctx.session.loggedin = True
+            web.ctx.session.rol_nombre = user['rol_nombre']
+            web.ctx.session.user_id = user['id_usuario']
+            
+            if user['rol_nombre'] == 'Administrador':
+                raise web.seeother('/administrador')
+            elif user['rol_nombre'] == 'Enfermera':
+                raise web.seeother('/enfermeras')
         else:
             return render.inicio_sesion(message="Nombre de usuario o contraseña incorrectos.")
 
@@ -291,129 +307,290 @@ class Logout:
         web.ctx.session.kill()
         raise web.seeother('/login')
 
-class AdministradorArea:
-    @rol_requerido(1)
+class AdminArea:
+    @rol_requerido('Administrador')
     def GET(self):
         return render.administrador_area()
 
-class AdministradorRegistrarUsuario:
-    @rol_requerido(1)
+class RegistroUsuario:
+    @rol_requerido('Administrador')
     def GET(self):
-        return render.administrador_registrar_usuario()
+        conn = web.ctx._db
+        roles = conn.execute("SELECT id_rol, nombre FROM Rol").fetchall()
+        return render.administrador_registrar_usuario(roles=roles, message="")
 
-class AdministradorVerUsuarios:
-    @rol_requerido(1)
-    def GET(self):
-        print("INFO: Se intentó acceder a la vista de visualización de usuarios.")
+    @rol_requerido('Administrador')
+    def POST(self):
         conn = web.ctx._db
         cursor = conn.cursor()
+        data = web.input()
         
-        # Realizamos una consulta JOIN para obtener el nombre del rol.
-        query = """
-        SELECT
-            T1.id_usuario,
-            T1.nombre,
-            T1.num_telefono,
-            T2.nombre AS rol
-        FROM
-            Usuarios AS T1
-        JOIN
-            Rol AS T2 ON T1.id_rol = T2.id_rol;
-        """
-        usuarios_data = cursor.execute(query).fetchall()
+        nombre = data.get('nombre')
+        num_telefono = data.get('num_telefono')
+        contrasena = data.get('contrasena')
+        id_rol = data.get('id_rol')
+        
+        if not all([nombre, num_telefono, contrasena, id_rol]):
+            roles = cursor.execute("SELECT id_rol, nombre FROM Rol").fetchall()
+            return render.administrador_registrar_usuario(roles=roles, message="Todos los campos son obligatorios.")
 
-        # Comprobación de depuración para ver si el archivo de plantilla existe.
-        template_path = os.path.join(template_dir, 'visualizacion_usuarios.html')
-        print(f"INFO: Intentando renderizar la plantilla: {template_path}")
-        if not os.path.exists(template_path):
-            print(f"ERROR: La plantilla no se encuentra en la ruta: {template_path}")
-            return "Error interno: La plantilla 'visualizacion_usuarios.html' no se encontró."
-
-        # Renderizamos la plantilla HTML y le pasamos los datos.
-        return render.visualizacion_usuarios(usuarios=usuarios_data)
-
-class AdministradorVerCitas:
-    @rol_requerido(1, 2)
-    def GET(self):
-        conn = web.ctx._db
-        cursor = conn.cursor()
-        query = """
-        SELECT
-            T1.fecha_cita,
-            T1.hora_de_entrada,
-            T1.subsecuente,
-            T2.apellido_paterno AS apellido_paterno_lactante,
-            T2.apellido_materno AS apellido_materno_lactante,
-            T3.nombre AS nombre_madre,
-            T3.apellido_paterno AS apellido_paterno_madre,
-            T4.nombre AS motivo
-        FROM
-            Citas AS T1
-        JOIN
-            Lactantes AS T2 ON T1.id_lactantes = T2.id_lactantes
-        JOIN
-            Madres AS T3 ON T2.id_madres = T3.id_madre
-        JOIN
-            Motivo AS T4 ON T1.id_motivo = T4.id_motivo;
-        """
-        citas_data = cursor.execute(query).fetchall()
-        return render.visualizacion_citas(citas=citas_data)
-
-class AdministradorVerLactantes:
-    @rol_requerido(1, 2)
-    def GET(self):
-        conn = web.ctx._db
-        cursor = conn.cursor()
-        query = """
-        SELECT
-            T1.id_lactantes,
-            T1.apellido_paterno AS primer_apellido,
-            T1.apellido_materno AS segundo_apellido,
-            T1.fecha_nacimiento,
-            T1.genero,
-            T1.estado,
-            T1.discapacidad,
-            T2.nombre AS nombre_madre,
-            T2.apellido_paterno AS apellido_madre
-        FROM
-            Lactantes AS T1
-        JOIN
-            Madres AS T2 ON T1.id_madres = T2.id_madre;
-        """
-        raw_data = cursor.execute(query).fetchall()
-        # Convertir los objetos sqlite3.Row a diccionarios para que la plantilla los maneje correctamente
-        lactantes_data = [dict(row) for row in raw_data]
-        return render.visualizacion_lactantes(lactantes=lactantes_data)
+        try:
+            password_hash = hashlib.sha256(contrasena.encode('utf-8')).hexdigest()
+            cursor.execute("INSERT INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES (?, ?, ?, ?)",
+                           (nombre, num_telefono, password_hash, id_rol))
+            conn.commit()
+            raise web.seeother('/visualizacion_usuarios')
+        except sqlite3.IntegrityError:
+            roles = cursor.execute("SELECT id_rol, nombre FROM Rol").fetchall()
+            return render.administrador_registrar_usuario(roles=roles, message="El número de teléfono ya está registrado.")
+        except sqlite3.Error as e:
+            print(f"Error al registrar usuario: {e}")
+            roles = cursor.execute("SELECT id_rol, nombre FROM Rol").fetchall()
+            return render.administrador_registrar_usuario(roles=roles, message=f"Error: {e}")
 
 class EnfermerasArea:
-    @rol_requerido(1, 2)
+    @rol_requerido('Enfermera')
     def GET(self):
         return render.enfermeras_area()
 
-class RegistroLactantes:
-    @rol_requerido(1, 2)
-    def GET(self):
-        return render.registro_lactantes()
-
 class RegistroCitas:
-    @rol_requerido(1, 2)
+    @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
-        return render.registro_citas()
+        conn = web.ctx._db
+        lactantes = conn.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes ORDER BY apellido_paterno").fetchall()
+        motivos = conn.execute("SELECT id_motivo, nombre FROM Motivo ORDER BY nombre").fetchall()
+        return render.registro_citas(lactantes=lactantes, motivos=motivos, message="")
+
+    @rol_requerido('Administrador', 'Enfermera')
+    def POST(self):
+        conn = web.ctx._db
+        cursor = conn.cursor()
+        data = web.input()
+        
+        id_lactantes = data.get('id_lactantes')
+        id_motivo = data.get('id_motivo')
+        fecha_cita = data.get('fecha_cita')
+        hora_entrada = data.get('hora_de_entrada')
+        justificacion = data.get('justificacion')
+        subsecuente = 1 if data.get('subsecuente') == 'on' else 0
+        
+        if not all([id_lactantes, id_motivo, fecha_cita]):
+            lactantes = cursor.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes").fetchall()
+            motivos = cursor.execute("SELECT id_motivo, nombre FROM Motivo").fetchall()
+            return render.registro_citas(lactantes=lactantes, motivos=motivos, message="Los campos de lactante, motivo y fecha son obligatorios.")
+
+        try:
+            atendido_por_id_usuario = web.ctx.session.get('user_id')
+            cursor.execute("""
+                INSERT INTO Citas (id_lactantes, id_motivo, atendido_por_id_usuario, fecha_cita, subsecuente, justificacion, hora_de_entrada) 
+                VALUES (?, ?, ?, ?, ?, ?, ?);
+            """, (id_lactantes, id_motivo, atendido_por_id_usuario, fecha_cita, subsecuente, justificacion, hora_entrada))
+            conn.commit()
+            raise web.seeother('/visualizacion_citas')
+        except sqlite3.Error as e:
+            conn.rollback()
+            lactantes = cursor.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes").fetchall()
+            motivos = cursor.execute("SELECT id_motivo, nombre FROM Motivo").fetchall()
+            return render.registro_citas(lactantes=lactantes, motivos=motivos, message=f"Error al registrar cita: {e}")
+
+class RegistroLactantes:
+    @rol_requerido('Administrador', 'Enfermera')
+    def GET(self):
+        conn = web.ctx._db
+        areas = conn.execute("SELECT id_area, nombre FROM Area").fetchall()
+        if web.ctx.session.get('rol_nombre') == 'Administrador':
+            return render.registro_lactantes(return_url='/administrador', error_message="", areas=areas)
+        else:
+            return render.registro_lactantes(return_url='/enfermeras', error_message="", areas=areas)
+    
+    @rol_requerido('Administrador', 'Enfermera')
+    def POST(self):
+        data = web.input()
+        conn = web.ctx._db
+        cursor = conn.cursor()
+        
+        try:
+            # --- Obtener y validar datos del formulario del lactante ---
+            apellido_paterno_lactante = data.get('apellido_paterno_lactante', '').strip()
+            apellido_materno_lactante = data.get('apellido_materno_lactante', '').strip()
+            fecha_nacimiento_str = data.get('fecha_nacimiento_lactante', '').strip()
+            genero_lactante = data.get('genero_lactante', '').strip()
+            discapacidad_lactante = data.get('discapacidad_lactante', '').strip()
+            area_lactante_nombre = data.get('area_lactante', '').strip()
+            
+            # Validación de campos obligatorios
+            if not all([apellido_paterno_lactante, fecha_nacimiento_str, genero_lactante, area_lactante_nombre]):
+                error_msg = "Los campos de apellido paterno, fecha, género y servicio del lactante son obligatorios."
+                areas = cursor.execute("SELECT id_area, nombre FROM Area").fetchall()
+                if web.ctx.session.get('rol_nombre') == 'Administrador':
+                    return render.registro_lactantes(return_url='/administrador', error_message=error_msg, areas=areas)
+                else:
+                    return render.registro_lactantes(return_url='/enfermeras', error_message=error_msg, areas=areas)
+            
+            # --- Lógica de la madre (buscar o crear) ---
+            nombre_madre = data.get('nombre_madre', '').strip()
+            apellido_paterno_madre = data.get('apellido_paterno_madre', '').strip()
+            
+            if nombre_madre and apellido_paterno_madre:
+                # Si se proporcionan datos de la madre, se registra una nueva
+                cursor.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES (?, ?, ?, ?, ?)",
+                               (nombre_madre, apellido_paterno_madre, data.get('apellido_materno_madre', ''), data.get('discapacidad_madre', ''), 1))
+                id_madre = cursor.lastrowid
+            else:
+                # Si no se proporcionan datos de la madre, se usa la madre "desconocida"
+                id_madre_row = cursor.execute("SELECT id_madre FROM Madres WHERE nombre = 'Desconocida'").fetchone()
+                if not id_madre_row:
+                    cursor.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES ('Desconocida', 'Desconocido', 'Desconocido', 'Ninguna', 1);")
+                    id_madre = cursor.lastrowid
+                else:
+                    id_madre = id_madre_row['id_madre']
+
+            # Buscar el ID del área para el lactante
+            area_id_row = cursor.execute("SELECT id_area FROM Area WHERE nombre = ?", (area_lactante_nombre,)).fetchone()
+            if not area_id_row:
+                error_msg = f"Error: El área '{area_lactante_nombre}' no existe en la base de datos."
+                areas = cursor.execute("SELECT id_area, nombre FROM Area").fetchall()
+                if web.ctx.session.get('rol_nombre') == 'Administrador':
+                    return render.registro_lactantes(return_url='/administrador', error_message=error_msg, areas=areas)
+                else:
+                    return render.registro_lactantes(return_url='/enfermeras', error_message=error_msg, areas=areas)
+            id_area = area_id_row['id_area']
+
+            # Insertar al lactante
+            cursor.execute("""
+                INSERT INTO Lactantes (id_madres, id_area, apellido_paterno, apellido_materno, fecha_nacimiento, genero, estado, discapacidad) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+            """, (
+                id_madre, 
+                id_area,
+                apellido_paterno_lactante, 
+                apellido_materno_lactante if apellido_materno_lactante else "Ninguno",
+                fecha_nacimiento_str, 
+                genero_lactante, 
+                "Activo",
+                discapacidad_lactante if discapacidad_lactante else "Ninguna"
+            ))
+            
+            conn.commit()
+            raise web.seeother('/visualizacion_lactantes')
+        
+        except sqlite3.Error as e:
+            conn.rollback()
+            error_msg = f"Error al registrar: {e}"
+            areas = cursor.execute("SELECT id_area, nombre FROM Area").fetchall()
+            if web.ctx.session.get('rol_nombre') == 'Administrador':
+                return render.registro_lactantes(return_url='/administrador', error_message=error_msg, areas=areas)
+            else:
+                return render.registro_lactantes(return_url='/enfermeras', error_message=error_msg, areas=areas)
 
 class ReportesArea:
-    @rol_requerido(1, 2)
+    @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
         return render.reportes()
 
 class ReportesGenerales:
-    @rol_requerido(1, 2)
+    @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
         return render.reportes_generales()
 
+    @rol_requerido('Administrador', 'Enfermera')
+    def POST(self):
+        data = web.input()
+        print("Datos del formulario de reportes generales recibidos:", data)
+        # Lógica para generar y procesar el reporte (ejemplo)
+        raise web.seeother('/reportes_generales')
+
 class ReportesPorLactante:
-    @rol_requerido(1, 2)
+    @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
-        return render.reportes_por_lactante()
+        conn = web.ctx._db
+        lactantes = conn.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes ORDER BY apellido_paterno").fetchall()
+        return render.reportes_por_lactante(lactantes=lactantes, reporte_data=None)
+
+    @rol_requerido('Administrador', 'Enfermera')
+    def POST(self):
+        conn = web.ctx._db
+        cursor = conn.cursor()
+        data = web.input()
+        
+        id_lactante = data.get('id_lactante')
+        
+        reporte = None
+        if id_lactante:
+            query = """
+                SELECT 
+                    T1.id_citas, T2.nombre AS nombre_madre, T3.apellido_paterno AS lactante_apellido, T4.nombre AS motivo, T1.fecha_cita
+                FROM Citas AS T1
+                JOIN Lactantes AS T3 ON T1.id_lactantes = T3.id_lactantes
+                JOIN Motivo AS T4 ON T1.id_motivo = T4.id_motivo
+                LEFT JOIN Madres AS T2 ON T3.id_madres = T2.id_madre
+                WHERE T1.id_lactantes = ?
+                ORDER BY T1.fecha_cita DESC;
+            """
+            reporte_data = cursor.execute(query, (id_lactante,)).fetchall()
+            reporte = [dict(row) for row in reporte_data]
+            
+        lactantes = cursor.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes ORDER BY apellido_paterno").fetchall()
+        return render.reportes_por_lactante(lactantes=lactantes, reporte_data=reporte)
+
+class VisualizacionCitas:
+    @rol_requerido('Administrador', 'Enfermera')
+    def GET(self):
+        conn = web.ctx._db
+        query = """
+            SELECT 
+                T1.id_citas, 
+                T1.fecha_cita, 
+                T1.hora_de_entrada,
+                T2.apellido_paterno AS lactante_apellido,
+                T3.nombre AS motivo_nombre,
+                T4.nombre AS atendido_por
+            FROM Citas AS T1
+            JOIN Lactantes AS T2 ON T1.id_lactantes = T2.id_lactantes
+            JOIN Motivo AS T3 ON T1.id_motivo = T3.id_motivo
+            JOIN Usuarios AS T4 ON T1.atendido_por_id_usuario = T4.id_usuario
+            ORDER BY T1.fecha_cita DESC;
+        """
+        citas = conn.execute(query).fetchall()
+        return render.visualizacion_citas(citas=citas)
+
+class VisualizacionLactantes:
+    @rol_requerido('Administrador', 'Enfermera')
+    def GET(self):
+        conn = web.ctx._db
+        query = """
+            SELECT 
+                T1.id_lactantes, 
+                T1.apellido_paterno AS lactante_apellido, 
+                T1.apellido_materno AS lactante_materno, 
+                T1.fecha_nacimiento, 
+                T1.genero,
+                T2.nombre AS nombre_madre,
+                T3.nombre AS area_nombre
+            FROM Lactantes AS T1
+            JOIN Madres AS T2 ON T1.id_madres = T2.id_madre
+            JOIN Area AS T3 ON T1.id_area = T3.id_area
+            ORDER BY T1.apellido_paterno;
+        """
+        lactantes = conn.execute(query).fetchall()
+        return render.visualizacion_lactantes(lactantes=lactantes)
+
+class VisualizacionUsuarios:
+    @rol_requerido('Administrador')
+    def GET(self):
+        conn = web.ctx._db
+        query = """
+            SELECT 
+                T1.id_usuario, 
+                T1.nombre, 
+                T1.num_telefono,
+                T2.nombre AS rol_nombre
+            FROM Usuarios AS T1
+            JOIN Rol AS T2 ON T1.id_rol = T2.id_rol
+            ORDER BY T2.nombre;
+        """
+        usuarios = conn.execute(query).fetchall()
+        return render.visualizacion_usuarios(usuarios=usuarios)
 
 class ReportesAPI:
     def POST(self):
@@ -488,12 +665,19 @@ class ReportesAPI:
             print(f"Error en ReportesAPI: {e}")
             return json.dumps({"error": "Ocurrió un error al generar el reporte."})
 
-
+# --- 5. Lógica de inicio del servidor ---
 if __name__ == "__main__":
     setup_database()
     app = web.application(urls, globals())
-    session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'loggedin': False, 'rol_id': None})
+    session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'loggedin': False, 'rol_nombre': None})
     
+    # Procesador para hacer la sesión accesible en web.ctx
+    def session_processor(handler):
+        web.ctx.session = session
+        return handler()
+    
+    app.add_processor(session_processor)
+
     def db_processor(handler):
         web.ctx._db = get_db()
         try:
@@ -502,19 +686,20 @@ if __name__ == "__main__":
             if hasattr(web.ctx, '_db'):
                 web.ctx._db.close()
     
-    def session_processor(handler):
-        web.ctx.session = session
-        return handler()
-
     app.add_processor(db_processor)
-    app.add_processor(session_processor)
-    print("Servidor web.py iniciado. Accede a http://localhost:8080/visualizacion_usuarios")
     app.run()
 else:
     setup_database()
     app = web.application(urls, globals())
-    session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'loggedin': False, 'rol_id': None})
+    session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'loggedin': False, 'rol_nombre': None})
     
+    # Procesador para hacer la sesión accesible en web.ctx
+    def session_processor(handler):
+        web.ctx.session = session
+        return handler()
+
+    app.add_processor(session_processor)
+
     def db_processor(handler):
         web.ctx._db = get_db()
         try:
@@ -522,11 +707,7 @@ else:
         finally:
             if hasattr(web.ctx, '_db'):
                 web.ctx._db.close()
-
-    def session_processor(handler):
-        web.ctx.session = session
-        return handler()
-
+    
     app.add_processor(db_processor)
-    app.add_processor(session_processor)
     application = app.wsgifunc()
+
