@@ -9,13 +9,11 @@ import sqlite3
 import hashlib
 import datetime
 
-web.config.debug = False
+web.config.debug = True  # FIX: Habilitado para depuración
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-# --- CAMBIO: Se añade una variable global 'static' para las plantillas ---
 render = web.template.render(template_dir, globals={'static': '/static'})
 
-
-# --- CAMBIO: Se añade una ruta para los archivos estáticos ---
+# --- Rutas de la aplicación (URLS) ---
 urls = (
     '/', 'Welcome',
     '/login', 'Login',
@@ -32,10 +30,11 @@ urls = (
     '/visualizacion_lactantes', 'VisualizacionLactantes',
     '/visualizacion_usuarios', 'VisualizacionUsuarios',
     '/api/generate_report', 'ReportesAPI',
-    '/static/(.*)', 'Static' # Nueva ruta
+    '/static/(.*)', 'Static',
+    r'/eliminar_lactante/(\d+)', 'EliminarLactante'
 )
 
-# --- CAMBIO: Se añade una clase para manejar los archivos estáticos ---
+# --- Manejador de Archivos Estáticos ---
 class Static:
     def GET(self, file):
         try:
@@ -45,8 +44,7 @@ class Static:
         except IOError:
             raise web.notfound()
 
-
-# --- Configuración de la base de datos SQLite3 (Sin cambios) ---
+# --- Conexión y Configuración de la Base de Datos ---
 DB_FILE = 'vinculo_de_vida.db'
 
 def get_db():
@@ -58,233 +56,85 @@ def get_db():
     return db
 
 def setup_database():
-    """
-    Crea las tablas y inserta los datos iniciales si la base de datos no existe.
-    """
+    """Crea las tablas y inserta los datos iniciales si la base de datos no existe."""
     conn = None
     try:
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON;")
 
-        create_tables_sql = [
-            """
-            CREATE TABLE IF NOT EXISTS Rol (
-                id_rol INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre TEXT NOT NULL UNIQUE,
-                permiso TEXT
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS Usuarios (
-                id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre TEXT NOT NULL,
-                num_telefono TEXT UNIQUE,
-                contraseña TEXT NOT NULL,
-                id_rol INTEGER,
-                FOREIGN KEY (id_rol) REFERENCES Rol(id_rol)
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS Auditoria (
-                id_auditoria INTEGER PRIMARY KEY AUTOINCREMENT,
-                id_usuario INTEGER,
-                accion TEXT NOT NULL,
-                tabla_afectada TEXT NOT NULL,
-                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario)
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS Reportes (
-                id_reportes INTEGER PRIMARY KEY AUTOINCREMENT,
-                id_usuario INTEGER,
-                tipo TEXT NOT NULL,
-                fecha_generado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                contenido TEXT,
-                FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario)
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS Motivo (
-                id_motivo INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre TEXT NOT NULL UNIQUE,
-                tipo_de_motivo TEXT
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS Madres (
-                id_madre INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre TEXT NOT NULL,
-                apellido_paterno TEXT NOT NULL,
-                apellido_materno TEXT,
-                discapacidad TEXT, 
-                id_motivo INTEGER,
-                FOREIGN KEY (id_motivo) REFERENCES Motivo(id_motivo)
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS Area (
-                id_area INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre TEXT NOT NULL UNIQUE,
-                tipo_de_area TEXT
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS Lactantes (
-                id_lactantes INTEGER PRIMARY KEY AUTOINCREMENT,
-                id_madres INTEGER,
-                id_area INTEGER,
-                apellido_paterno TEXT NOT NULL,
-                apellido_materno TEXT,
-                fecha_nacimiento DATE, 
-                genero TEXT,
-                estado TEXT,
-                discapacidad TEXT, 
-                FOREIGN KEY (id_madres) REFERENCES Madres(id_madre),
-                FOREIGN KEY (id_area) REFERENCES Area(id_area)
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS Citas (
-                id_citas INTEGER PRIMARY KEY AUTOINCREMENT,
-                id_lactantes INTEGER,
-                id_motivo INTEGER,
-                atendido_por_id_usuario INTEGER,
-                fecha_cita TEXT NOT NULL,
-                subsecuente INTEGER,
-                justificacion TEXT,
-                hora_de_entrada TEXT,
-                FOREIGN KEY (id_lactantes) REFERENCES Lactantes(id_lactantes),
-                FOREIGN KEY (id_motivo) REFERENCES Motivo(id_motivo),
-                FOREIGN KEY (atendido_por_id_usuario) REFERENCES Usuarios(id_usuario)
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS Controles (
-                id_controles INTEGER PRIMARY KEY AUTOINCREMENT,
-                id_lactantes INTEGER,
-                peso REAL,
-                talla REAL,
-                edad_meses INTEGER,
-                estado_general TEXT,
-                fecha_control TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                observaciones TEXT,
-                FOREIGN KEY (id_lactantes) REFERENCES Lactantes(id_lactantes)
-            );
-            """
-        ]
-
-        contrasena_admin_hash = hashlib.sha256("12345".encode('utf-8')).hexdigest()
-        contrasena_enfermera_hash = hashlib.sha256("pass123".encode('utf-8')).hexdigest()
-
-        initial_data_sql = [
-            "INSERT OR IGNORE INTO Rol (nombre, permiso) VALUES ('Administrador', 'all');",
-            "INSERT OR IGNORE INTO Rol (nombre, permiso) VALUES ('Enfermera', 'read_write_patients');",
-            "INSERT OR IGNORE INTO Motivo (nombre, tipo_de_motivo) VALUES ('Chequeo de rutina', 'Control');",
-            "INSERT OR IGNORE INTO Motivo (nombre, tipo_de_motivo) VALUES ('Donación de leche', 'Lactancia Materna');",
-            "INSERT OR IGNORE INTO Motivo (nombre, tipo_de_motivo) VALUES ('Lactancia Materna', 'Apoyo');",
-            "INSERT OR IGNORE INTO Area (nombre, tipo_de_area) VALUES ('UCIN', 'Médica');",
-            "INSERT OR IGNORE INTO Area (nombre, tipo_de_area) VALUES ('UTIN', 'Médica');",
-            "INSERT OR IGNORE INTO Area (nombre, tipo_de_area) VALUES ('Crecimiento y desarrollo', 'Médica');",
-            "INSERT OR IGNORE INTO Area (nombre, tipo_de_area) VALUES ('Foraneos', 'No Médica');",
-            "INSERT OR IGNORE INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES ('Desconocida', 'Desconocido', 'Desconocido', 'Ninguna', 1);",
-            f"""
-            INSERT OR IGNORE INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES (
-                'Admin', '555-0000', '{contrasena_admin_hash}', (SELECT id_rol FROM Rol WHERE nombre = 'Administrador')
-            );
-            """,
-            f"""
-            INSERT OR IGNORE INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES (
-                'María López', '555-1234', '{contrasena_enfermera_hash}', (SELECT id_rol FROM Rol WHERE nombre = 'Enfermera')
-            );
-            """,
-            f"""
-            INSERT OR IGNORE INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES (
-                'Ana Pérez', '555-5678', '{contrasena_enfermera_hash}', (SELECT id_rol FROM Rol WHERE nombre = 'Enfermera')
-            );
-            """,
-            """
-            INSERT OR IGNORE INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES (
-                'Juana', 'Pérez', 'Gómez', 'Ninguna', (SELECT id_motivo FROM Motivo WHERE nombre = 'Chequeo de rutina')
-            );
-            """,
-            """
-            INSERT OR IGNORE INTO Lactantes (id_madres, id_area, apellido_paterno, apellido_materno, fecha_nacimiento, genero, estado, discapacidad) VALUES (
-                (SELECT id_madre FROM Madres WHERE nombre = 'Juana'), 
-                (SELECT id_area FROM Area WHERE nombre = 'UCIN'),
-                'Pérez',
-                'Gómez',
-                '2024-01-15', 
-                'Masculino', 
-                'Activo',
-                'Ninguna'
-            );
-            """,
-            """
-            INSERT OR IGNORE INTO Citas (id_lactantes, id_motivo, atendido_por_id_usuario, fecha_cita, subsecuente, justificacion, hora_de_entrada) VALUES (
-                (SELECT id_lactantes FROM Lactantes WHERE apellido_paterno = 'Pérez'), 
-                (SELECT id_motivo FROM Motivo WHERE nombre = 'Chequeo de rutina'), 
-                (SELECT id_usuario FROM Usuarios WHERE nombre = 'María López'),
-                '2025-08-10',
-                0,
-                'Control de peso y talla',
-                '09:30'
-            );
-            """
-        ]
-
-        print("Creando tablas...")
-        for table_sql in create_tables_sql:
-            cursor.execute(table_sql)
-        print("Tablas creadas con éxito.")
-
-        print("Insertando datos de ejemplo...")
-        for insert_sql in initial_data_sql:
-            cursor.execute(insert_sql)
-        
+        create_tables_sql = """
+            CREATE TABLE IF NOT EXISTS Rol (id_rol INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL UNIQUE, permiso TEXT);
+            CREATE TABLE IF NOT EXISTS Usuarios (id_usuario INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL, num_telefono TEXT UNIQUE, contraseña TEXT NOT NULL, id_rol INTEGER, FOREIGN KEY (id_rol) REFERENCES Rol(id_rol));
+            CREATE TABLE IF NOT EXISTS Auditoria (id_auditoria INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, accion TEXT NOT NULL, tabla_afectada TEXT NOT NULL, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario));
+            CREATE TABLE IF NOT EXISTS Reportes (id_reportes INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER, tipo TEXT NOT NULL, fecha_generado TIMESTAMP DEFAULT CURRENT_TIMESTAMP, contenido TEXT, FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario));
+            CREATE TABLE IF NOT EXISTS Motivo (id_motivo INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL UNIQUE, tipo_de_motivo TEXT);
+            CREATE TABLE IF NOT EXISTS Madres (id_madre INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL, apellido_paterno TEXT NOT NULL, apellido_materno TEXT, discapacidad TEXT, id_motivo INTEGER, FOREIGN KEY (id_motivo) REFERENCES Motivo(id_motivo));
+            CREATE TABLE IF NOT EXISTS Area (id_area INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL UNIQUE, tipo_de_area TEXT);
+            CREATE TABLE IF NOT EXISTS Lactantes (id_lactantes INTEGER PRIMARY KEY AUTOINCREMENT, id_madres INTEGER, id_area INTEGER, apellido_paterno TEXT NOT NULL, apellido_materno TEXT, fecha_nacimiento DATE, genero TEXT, estado TEXT, discapacidad TEXT, peso REAL, FOREIGN KEY (id_madres) REFERENCES Madres(id_madre), FOREIGN KEY (id_area) REFERENCES Area(id_area));
+            CREATE TABLE IF NOT EXISTS Citas (id_citas INTEGER PRIMARY KEY AUTOINCREMENT, id_lactantes INTEGER, id_motivo INTEGER, atendido_por_id_usuario INTEGER, fecha_cita TEXT NOT NULL, subsecuente INTEGER, justificacion TEXT, hora_de_entrada TEXT, FOREIGN KEY (id_lactantes) REFERENCES Lactantes(id_lactantes) ON DELETE CASCADE, FOREIGN KEY (id_motivo) REFERENCES Motivo(id_motivo), FOREIGN KEY (atendido_por_id_usuario) REFERENCES Usuarios(id_usuario));
+            CREATE TABLE IF NOT EXISTS Controles (id_controles INTEGER PRIMARY KEY AUTOINCREMENT, id_lactantes INTEGER, peso REAL, talla REAL, edad_meses INTEGER, estado_general TEXT, fecha_control TIMESTAMP DEFAULT CURRENT_TIMESTAMP, observaciones TEXT, FOREIGN KEY (id_lactantes) REFERENCES Lactantes(id_lactantes) ON DELETE CASCADE);
+        """
+        cursor.executescript(create_tables_sql)
         conn.commit()
-        print("Datos de ejemplo insertados con éxito.")
+        
+        # --- Inserción robusta de datos iniciales ---
+        cursor.execute("SELECT COUNT(id_rol) FROM Rol")
+        if cursor.fetchone()[0] == 0:
+            print("Insertando datos iniciales...")
+            contrasena_admin_hash = hashlib.sha256("12345".encode('utf-8')).hexdigest()
+            contrasena_enfermera_hash = hashlib.sha256("pass123".encode('utf-8')).hexdigest()
+            
+            initial_data = [
+                "INSERT INTO Rol (nombre, permiso) VALUES ('Administrador', 'all'), ('Enfermera', 'read_write_patients');",
+                "INSERT INTO Motivo (nombre, tipo_de_motivo) VALUES ('Chequeo de rutina', 'Control'), ('Donación de leche', 'Lactancia Materna'), ('Lactancia Materna', 'Apoyo');",
+                "INSERT INTO Area (nombre, tipo_de_area) VALUES ('UCIN', 'Médica'), ('UTIN', 'Médica'), ('Crecimiento y desarrollo', 'Médica'), ('Foraneos', 'No Médica');",
+                "INSERT INTO Madres (nombre, apellido_paterno, id_motivo) VALUES ('Desconocida', 'Desconocido', 1);",
+                f"INSERT INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES ('Admin', '555-0000', '{contrasena_admin_hash}', (SELECT id_rol FROM Rol WHERE nombre = 'Administrador'));",
+                f"INSERT INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES ('María López', '555-1234', '{contrasena_enfermera_hash}', (SELECT id_rol FROM Rol WHERE nombre = 'Enfermera'));",
+                f"INSERT INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES ('Ana Pérez', '555-5678', '{contrasena_enfermera_hash}', (SELECT id_rol FROM Rol WHERE nombre = 'Enfermera'));"
+            ]
+            
+            for statement in initial_data:
+                cursor.execute(statement)
+            conn.commit()
+            print("Datos iniciales insertados.")
 
     except sqlite3.Error as e:
-        print(f"Error de base de datos: {e}")
+        print(f"Error de base de datos durante la configuración: {e}")
+        raise
     finally:
         if conn:
             conn.close()
-            print("Conexión de configuración cerrada.")
 
 def log_auditoria(accion, tabla_afectada):
-    """Registra una acción de usuario en la tabla de Auditoria."""
-    conn = web.ctx._db
-    cursor = conn.cursor()
-    id_usuario = web.ctx.session.get('user_id')
-    if id_usuario:
-        try:
-            cursor.execute("INSERT INTO Auditoria (id_usuario, accion, tabla_afectada) VALUES (?, ?, ?)",
-                           (id_usuario, accion, tabla_afectada))
+    try:
+        conn = web.ctx._db
+        id_usuario = web.ctx.session.get('user_id')
+        if id_usuario:
+            conn.execute("INSERT INTO Auditoria (id_usuario, accion, tabla_afectada) VALUES (?, ?, ?)",
+                         (id_usuario, accion, tabla_afectada))
             conn.commit()
-        except sqlite3.Error as e:
-            print(f"Error al registrar en auditoría: {e}")
+    except sqlite3.Error as e:
+        print(f"Error al registrar en auditoría: {e}")
 
-# --- Decorador (Sin cambios) ---
 def rol_requerido(*roles_permitidos):
     def decorator(func):
         def wrapper(*args, **kwargs):
             rol_usuario = web.ctx.session.get('rol_nombre')
             if rol_usuario in roles_permitidos:
                 return func(*args, **kwargs)
+            
+            if not web.ctx.session.get('loggedin'):
+                raise web.seeother('/login')
+            elif rol_usuario == 'Administrador':
+                raise web.seeother('/administrador')
             else:
-                if not web.ctx.session.get('loggedin'):
-                    raise web.seeother('/login')
-                elif rol_usuario == 'Administrador':
-                    raise web.seeother('/administrador')
-                elif rol_usuario == 'Enfermera':
-                    raise web.seeother('/enfermeras')
-                else:
-                    raise web.seeother('/login')
+                raise web.seeother('/enfermeras')
         return wrapper
     return decorator
 
-# --- Clases del Manejador de Solicitudes (Sin cambios en la lógica principal) ---
+# --- Clases del Manejador de Solicitudes (GET y POST) ---
 class Welcome:
     def GET(self):
         return render.index()
@@ -297,22 +147,13 @@ class Login:
         data = web.input()
         username = data.get('username')
         password = data.get('password')
-
         if not username or not password:
-            return render.inicio_sesion(message="El nombre de usuario y la contraseña no pueden estar vacíos.")
+            return render.inicio_sesion(message="Usuario y contraseña son requeridos.")
         
         conn = web.ctx._db
-        cursor = conn.cursor()
-        
         password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
-
-        query = """
-            SELECT T1.id_usuario, T2.nombre as rol_nombre, T1.contraseña
-            FROM Usuarios AS T1
-            JOIN Rol AS T2 ON T1.id_rol = T2.id_rol
-            WHERE T1.nombre = ?;
-        """
-        user = cursor.execute(query, (username,)).fetchone()
+        query = "SELECT u.id_usuario, r.nombre as rol_nombre, u.contraseña FROM Usuarios u JOIN Rol r ON u.id_rol = r.id_rol WHERE u.nombre = ?;"
+        user = conn.execute(query, (username,)).fetchone()
         
         if user and password_hash == user['contraseña']:
             web.ctx.session.loggedin = True
@@ -321,10 +162,10 @@ class Login:
             
             if user['rol_nombre'] == 'Administrador':
                 raise web.seeother('/administrador')
-            elif user['rol_nombre'] == 'Enfermera':
+            else:
                 raise web.seeother('/enfermeras')
         else:
-            return render.inicio_sesion(message="Nombre de usuario o contraseña incorrectos.")
+            return render.inicio_sesion(message="Credenciales incorrectas.")
 
 class Logout:
     def GET(self):
@@ -339,228 +180,241 @@ class AdminArea:
 class RegistroUsuario:
     @rol_requerido('Administrador')
     def GET(self):
-        conn = web.ctx._db
-        roles = conn.execute("SELECT id_rol, nombre FROM Rol").fetchall()
+        roles = get_db().execute("SELECT id_rol, nombre FROM Rol").fetchall()
         return render.administrador_registrar_usuario(roles=roles, message="")
 
     @rol_requerido('Administrador')
     def POST(self):
-        conn = web.ctx._db
-        cursor = conn.cursor()
-        data = web.input()
-        
-        nombre = data.get('nombre')
-        num_telefono = data.get('num_telefono')
-        contrasena = data.get('contrasena')
-        id_rol = data.get('id_rol')
-        
-        roles = cursor.execute("SELECT id_rol, nombre FROM Rol").fetchall()
-        if not all([nombre, num_telefono, contrasena, id_rol]):
+        data = web.input(nombre=None, num_telefono=None, contrasena=None, id_rol=None)
+        conn = get_db()
+        roles = conn.execute("SELECT id_rol, nombre FROM Rol").fetchall()
+        if not all([data.nombre, data.num_telefono, data.contrasena, data.id_rol]):
             return render.administrador_registrar_usuario(roles=roles, message="Todos los campos son obligatorios.")
-
         try:
-            password_hash = hashlib.sha256(contrasena.encode('utf-8')).hexdigest()
-            cursor.execute("INSERT INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES (?, ?, ?, ?)",
-                           (nombre, num_telefono, password_hash, id_rol))
+            password_hash = hashlib.sha256(data.contrasena.encode('utf-8')).hexdigest()
+            conn.execute("INSERT INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES (?, ?, ?, ?)",
+                         (data.nombre, data.num_telefono, password_hash, data.id_rol))
             conn.commit()
-            
-            log_auditoria(accion="Registro de nuevo usuario", tabla_afectada="Usuarios")
-            
+            log_auditoria("Registro de nuevo usuario", "Usuarios")
             raise web.seeother('/visualizacion_usuarios')
         except sqlite3.IntegrityError:
             return render.administrador_registrar_usuario(roles=roles, message="El número de teléfono ya está registrado.")
         except sqlite3.Error as e:
-            print(f"Error al registrar usuario: {e}")
-            return render.administrador_registrar_usuario(roles=roles, message=f"Error inesperado al registrar usuario: {e}")
+            return render.administrador_registrar_usuario(roles=roles, message=f"Error inesperado: {e}")
 
 class EnfermerasArea:
     @rol_requerido('Enfermera')
     def GET(self):
         return render.enfermeras_area()
 
-# --- CAMBIO: Lógica de RegistroCitas actualizada para el nuevo formulario ---
-class RegistroCitas:
+# --- FIX: Lógica mejorada para el registro de lactantes y madres ---
+class RegistroLactantes:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
-        # El nuevo formulario no necesita datos precargados, solo renderiza la plantilla.
-        return render.registro_citas(message="")
-
+        areas = get_db().execute("SELECT id_area, nombre FROM Area").fetchall()
+        return_url = '/administrador' if web.ctx.session.get('rol_nombre') == 'Administrador' else '/enfermeras'
+        return render.registro_lactantes(return_url=return_url, error_message="", areas=areas)
+    
     @rol_requerido('Administrador', 'Enfermera')
     def POST(self):
         data = web.input()
-        conn = web.ctx._db
-        cursor = conn.cursor()
-
+        conn = get_db()
         try:
-            # 1. Obtener datos del formulario
+            # 1. Obtener datos del lactante
+            paterno_lactante = data.get('apellido_paterno_lactante', '').strip()
+            fecha_nac = data.get('fecha_nacimiento_lactante', '').strip()
+            genero = data.get('genero_lactante', '').strip()
+            area_nombre = data.get('area_lactante', '').strip()
+            
+            # 2. Validar campos obligatorios del lactante
+            if not all([paterno_lactante, fecha_nac, genero, area_nombre]):
+                raise ValueError("Los campos de apellido paterno, fecha, género y servicio del lactante son obligatorios.")
+
+            # 3. Validar y obtener el ID del área
+            area_id_row = conn.execute("SELECT id_area FROM Area WHERE nombre = ?", (area_nombre,)).fetchone()
+            if not area_id_row:
+                raise ValueError(f"El área '{area_nombre}' no existe.")
+            id_area = area_id_row['id_area']
+
+            # 4. Procesar datos de la madre (buscar o crear)
             nombre_madre = data.get('nombre_madre', '').strip()
             paterno_madre = data.get('apellido_paterno_madre', '').strip()
-            materno_madre = data.get('apellido_materno_madre', '').strip()
-            discapacidad_madre = data.get('discapacidad_madre', 'Ninguna')
-            
-            paterno_lactante = data.get('apellido_paterno_lactante', '').strip()
-            materno_lactante = data.get('apellido_materno_lactante', '').strip()
-
-            hora_llegada = data.get('hora_llegada')
-            subsecuente = 1 if data.get('subsecuente') == 'on' else 0
-
-            # 2. Validar campos obligatorios
-            if not all([nombre_madre, paterno_madre, paterno_lactante, hora_llegada]):
-                return render.registro_citas(message="Los nombres y apellidos de la madre, el primer apellido del lactante y la hora son obligatorios.")
-
-            # 3. Buscar o crear a la madre
-            cursor.execute("SELECT id_madre FROM Madres WHERE nombre = ? AND apellido_paterno = ?", (nombre_madre, paterno_madre))
-            madre_existente = cursor.fetchone()
             
             id_madre = None
-            if madre_existente:
-                id_madre = madre_existente['id_madre']
+            if nombre_madre and paterno_madre:
+                # Buscar si la madre ya existe
+                madre_existente = conn.execute("SELECT id_madre FROM Madres WHERE nombre = ? AND apellido_paterno = ?", (nombre_madre, paterno_madre)).fetchone()
+                if madre_existente:
+                    id_madre = madre_existente['id_madre']
+                else:
+                    # Crear nueva madre si no existe
+                    conn.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES (?, ?, ?, ?, 1)",
+                                 (nombre_madre, paterno_madre, data.get('apellido_materno_madre', ''), data.get('discapacidad_madre', '')))
+                    id_madre = conn.lastrowid
+                    log_auditoria("Registro de nueva madre", "Madres")
             else:
-                # Si no existe, la creamos con un motivo por defecto
-                cursor.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES (?, ?, ?, ?, 1)",
-                               (nombre_madre, paterno_madre, materno_madre, discapacidad_madre))
-                id_madre = cursor.lastrowid
-                log_auditoria("Registro de nueva madre desde formulario de citas", "Madres")
+                # Usar madre 'Desconocida' si no se proporciona información
+                id_madre_row = conn.execute("SELECT id_madre FROM Madres WHERE nombre = 'Desconocida'").fetchone()
+                id_madre = id_madre_row['id_madre']
 
-            # 4. Buscar al lactante asociado a esa madre
-            cursor.execute("SELECT id_lactantes FROM Lactantes WHERE id_madres = ? AND apellido_paterno = ?", (id_madre, paterno_lactante))
-            lactante_existente = cursor.fetchone()
-
-            if not lactante_existente:
-                return render.registro_citas(message=f"No se encontró un lactante con apellido '{paterno_lactante}' asociado a la madre. Por favor, registre al lactante primero.")
+            # 5. Insertar el nuevo lactante
+            conn.execute("""
+                INSERT INTO Lactantes (id_madres, id_area, apellido_paterno, apellido_materno, fecha_nacimiento, genero, estado, discapacidad, peso)  
+                VALUES (?, ?, ?, ?, ?, ?, 'Activo', ?, ?);
+            """, (id_madre, id_area, paterno_lactante, data.get('apellido_materno_lactante', ''), fecha_nac, genero, data.get('discapacidad_lactante', 'Ninguna'), data.get('peso_lactante')))
             
-            id_lactante = lactante_existente['id_lactantes']
+            conn.commit()
+            log_auditoria("Registro de nuevo lactante", "Lactantes")
+            raise web.seeother('/visualizacion_lactantes')
+        
+        except (sqlite3.Error, ValueError) as e:
+            conn.rollback()
+            areas = conn.execute("SELECT id_area, nombre FROM Area").fetchall()
+            return_url = '/administrador' if web.ctx.session.get('rol_nombre') == 'Administrador' else '/enfermeras'
+            return render.registro_lactantes(return_url=return_url, error_message=f"Error al registrar: {e}", areas=areas)
 
-            # 5. Agendar la cita
+# --- FIX: Lógica mejorada para el registro de citas ---
+class RegistroCitas:
+    @rol_requerido('Administrador', 'Enfermera')
+    def GET(self):
+        # En la página de citas, necesitamos los lactantes para que el usuario pueda seleccionarlos
+        lactantes = get_db().execute("SELECT id_lactantes, apellido_paterno, apellido_materno FROM Lactantes ORDER BY apellido_paterno").fetchall()
+        return render.registro_citas(message="", lactantes=lactantes)
+    
+    @rol_requerido('Administrador', 'Enfermera')
+    def POST(self):
+        data = web.input()
+        conn = get_db()
+
+        try:
+            # Obtener datos del formulario
+            id_lactante = data.get('id_lactante')
+            hora_llegada = data.get('hora_llegada')
+            justificacion = data.get('justificacion')
+            subsecuente = 1 if data.get('subsecuente_checkbox') == 'on' else 0
+
+            # Validar campos obligatorios
+            if not all([id_lactante, hora_llegada, justificacion]):
+                raise ValueError("Los campos de lactante, hora de llegada y justificación son obligatorios.")
+
+            # Agendar la cita
             atendido_por_id_usuario = web.ctx.session.get('user_id')
             fecha_actual = datetime.date.today().isoformat()
             
             # Usamos un motivo por defecto ("Chequeo de rutina", ID 1)
-            id_motivo_defecto = 1 
+            id_motivo_defecto = 1
 
-            cursor.execute("""
-                INSERT INTO Citas (id_lactantes, id_motivo, atendido_por_id_usuario, fecha_cita, subsecuente, justificacion, hora_de_entrada) 
+            conn.execute("""
+                INSERT INTO Citas (id_lactantes, id_motivo, atendido_por_id_usuario, fecha_cita, subsecuente, justificacion, hora_de_entrada)  
                 VALUES (?, ?, ?, ?, ?, ?, ?);
-            """, (id_lactante, id_motivo_defecto, atendido_por_id_usuario, fecha_actual, subsecuente, "Cita agendada desde formulario general", hora_llegada))
+            """, (id_lactante, id_motivo_defecto, atendido_por_id_usuario, fecha_actual, subsecuente, justificacion, hora_llegada))
             
             conn.commit()
             log_auditoria(f"Registro de nueva cita para lactante ID {id_lactante}", "Citas")
             
             raise web.seeother('/visualizacion_citas')
 
-        except sqlite3.Error as e:
+        except (ValueError, sqlite3.Error) as e:
             conn.rollback()
             print(f"Error al registrar cita: {e}")
-            return render.registro_citas(message=f"Error de base de datos al registrar la cita: {e}")
+            lactantes = conn.execute("SELECT id_lactantes, apellido_paterno, apellido_materno FROM Lactantes ORDER BY apellido_paterno").fetchall()
+            return render.registro_citas(message=f"Error al registrar la cita: {e}", lactantes=lactantes)
 
-
-class RegistroLactantes:
+# --- Clases de visualización (Sin cambios relevantes) ---
+class VisualizacionLactantes:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
-        conn = web.ctx._db
+        conn = get_db()
         areas = conn.execute("SELECT id_area, nombre FROM Area").fetchall()
-        if web.ctx.session.get('rol_nombre') == 'Administrador':
-            return render.registro_lactantes(return_url='/administrador', error_message="", areas=areas)
-        else:
-            return render.registro_lactantes(return_url='/enfermeras', error_message="", areas=areas)
-    
+        lactantes = conn.execute("""
+            SELECT l.*, m.nombre AS nombre_madre, a.nombre AS area_nombre
+            FROM Lactantes l
+            LEFT JOIN Madres m ON l.id_madres = m.id_madre
+            LEFT JOIN Area a ON l.id_area = a.id_area
+            ORDER BY l.apellido_paterno;
+        """).fetchall()
+        return render.visualizacion_lactantes(lactantes=lactantes, areas=areas)
+
     @rol_requerido('Administrador', 'Enfermera')
     def POST(self):
         data = web.input()
-        conn = web.ctx._db
-        cursor = conn.cursor()
-        areas = cursor.execute("SELECT id_area, nombre FROM Area").fetchall()
-        
+        conn = get_db()
         try:
-            apellido_paterno_lactante = data.get('apellido_paterno_lactante', '').strip()
-            apellido_materno_lactante = data.get('apellido_materno_lactante', '').strip()
-            fecha_nacimiento_str = data.get('fecha_nacimiento_lactante', '').strip()
-            genero_lactante = data.get('genero_lactante', '').strip()
-            discapacidad_lactante = data.get('discapacidad_lactante', '').strip()
-            area_lactante_nombre = data.get('area_lactante', '').strip()
+            area_row = conn.execute("SELECT id_area FROM Area WHERE nombre = ?", (data.area_nombre,)).fetchone()
+            if not area_row:
+                raise ValueError(f"El área '{data.area_nombre}' no es válida.")
             
-            if not all([apellido_paterno_lactante, fecha_nacimiento_str, genero_lactante, area_lactante_nombre]):
-                error_msg = "Los campos de apellido paterno, fecha, género y servicio del lactante son obligatorios."
-                if web.ctx.session.get('rol_nombre') == 'Administrador':
-                    return render.registro_lactantes(return_url='/administrador', error_message=error_msg, areas=areas)
-                else:
-                    return render.registro_lactantes(return_url='/enfermeras', error_message=error_msg, areas=areas)
-            
-            nombre_madre = data.get('nombre_madre', '').strip()
-            apellido_paterno_madre = data.get('apellido_paterno_madre', '').strip()
-            
-            if nombre_madre and apellido_paterno_madre:
-                cursor.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES (?, ?, ?, ?, ?)",
-                               (nombre_madre, apellido_paterno_madre, data.get('apellido_materno_madre', ''), data.get('discapacidad_madre', ''), 1))
-                id_madre = cursor.lastrowid
-            else:
-                id_madre_row = cursor.execute("SELECT id_madre FROM Madres WHERE nombre = 'Desconocida'").fetchone()
-                if not id_madre_row:
-                    cursor.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES ('Desconocida', 'Desconocido', 'Desconocido', 'Ninguna', 1);")
-                    id_madre = cursor.lastrowid
-                else:
-                    id_madre = id_madre_row['id_madre']
-
-            area_id_row = cursor.execute("SELECT id_area FROM Area WHERE nombre = ?", (area_lactante_nombre,)).fetchone()
-            if not area_id_row:
-                error_msg = f"Error: El área '{area_lactante_nombre}' no existe en la base de datos."
-                if web.ctx.session.get('rol_nombre') == 'Administrador':
-                    return render.registro_lactantes(return_url='/administrador', error_message=error_msg, areas=areas)
-                else:
-                    return render.registro_lactantes(return_url='/enfermeras', error_message=error_msg, areas=areas)
-            id_area = area_id_row['id_area']
-
-            cursor.execute("""
-                INSERT INTO Lactantes (id_madres, id_area, apellido_paterno, apellido_materno, fecha_nacimiento, genero, estado, discapacidad) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-            """, (
-                id_madre, 
-                id_area,
-                apellido_paterno_lactante, 
-                apellido_materno_lactante if apellido_materno_lactante else "Ninguno",
-                fecha_nacimiento_str, 
-                genero_lactante, 
-                "Activo",
-                discapacidad_lactante if discapacidad_lactante else "Ninguna"
-            ))
-            
+            conn.execute("""
+                UPDATE Lactantes SET
+                    apellido_paterno = ?, apellido_materno = ?, fecha_nacimiento = ?,
+                    genero = ?, discapacidad = ?, peso = ?, id_area = ?
+                WHERE id_lactantes = ?
+            """, (data.apellido_paterno, data.apellido_materno, data.fecha_nacimiento, data.genero, data.discapacidad, data.peso, area_row['id_area'], data.id_lactantes))
             conn.commit()
-            
-            log_auditoria(accion="Registro de nuevo lactante", tabla_afectada="Lactantes")
-            
-            raise web.seeother('/visualizacion_lactantes')
-        
+            log_auditoria(f"Actualización lactante ID {data.id_lactantes}", "Lactantes")
+        except (sqlite3.Error, ValueError) as e:
+            conn.rollback()
+            print(f"Error al actualizar lactante: {e}")
+        raise web.seeother('/visualizacion_lactantes')
+
+class EliminarLactante:
+    @rol_requerido('Administrador', 'Enfermera')
+    def GET(self, id_lactante):
+        conn = get_db()
+        try:
+            conn.execute("DELETE FROM Lactantes WHERE id_lactantes = ?", (id_lactante,))
+            conn.commit()
+            log_auditoria(f"Eliminación lactante ID {id_lactante}", "Lactantes")
         except sqlite3.Error as e:
             conn.rollback()
-            error_msg = f"Error al registrar: {e}"
-            if web.ctx.session.get('rol_nombre') == 'Administrador':
-                return render.registro_lactantes(return_url='/administrador', error_message=error_msg, areas=areas)
-            else:
-                return render.registro_lactantes(return_url='/enfermeras', error_message=error_msg, areas=areas)
+            print(f"Error al eliminar lactante: {e}")
+        raise web.seeother('/visualizacion_lactantes')
 
+class VisualizacionCitas:
+    @rol_requerido('Administrador', 'Enfermera')
+    def GET(self):
+        citas = get_db().execute("""
+            SELECT c.id_citas, c.fecha_cita, c.hora_de_entrada, l.apellido_paterno AS lactante_apellido,
+                   m.nombre AS motivo_nombre, u.nombre AS atendido_por
+            FROM Citas c
+            JOIN Lactantes l ON c.id_lactantes = l.id_lactantes
+            JOIN Motivo m ON c.id_motivo = m.id_motivo
+            JOIN Usuarios u ON c.atendido_por_id_usuario = u.id_usuario
+            ORDER BY c.fecha_cita DESC;
+        """).fetchall()
+        return render.visualizacion_citas(citas=citas)
+
+class VisualizacionUsuarios:
+    @rol_requerido('Administrador')
+    def GET(self):
+        usuarios = get_db().execute("""
+            SELECT u.id_usuario, u.nombre, u.num_telefono, r.nombre AS rol_nombre
+            FROM Usuarios u JOIN Rol r ON u.id_rol = r.id_rol ORDER BY r.nombre;
+        """).fetchall()
+        return render.visualizacion_usuarios(usuarios=usuarios)
+
+# --- Clases de Reportes y API ---
 class ReportesArea:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
         return render.reportes()
-
 class ReportesGenerales:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
-        conn = web.ctx._db
+        conn = get_db()
         reports = conn.execute("SELECT tipo, fecha_generado FROM Reportes ORDER BY fecha_generado DESC").fetchall()
         return render.reportes_generales(reports=reports)
 
 class ReportesPorLactante:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
-        conn = web.ctx._db
+        conn = get_db()
         lactantes = conn.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes ORDER BY apellido_paterno").fetchall()
         return render.reportes_por_lactante(lactantes=lactantes, reporte_data=None)
 
     @rol_requerido('Administrador', 'Enfermera')
     def POST(self):
-        conn = web.ctx._db
-        cursor = conn.cursor()
+        conn = get_db()
         data = web.input()
         
         id_lactante = data.get('id_lactante')
@@ -568,7 +422,7 @@ class ReportesPorLactante:
         reporte = None
         if id_lactante:
             query = """
-                SELECT 
+                SELECT  
                     T1.id_citas, T2.nombre AS nombre_madre, T3.apellido_paterno AS lactante_apellido, T4.nombre AS motivo, T1.fecha_cita
                 FROM Citas AS T1
                 JOIN Lactantes AS T3 ON T1.id_lactantes = T3.id_lactantes
@@ -577,70 +431,11 @@ class ReportesPorLactante:
                 WHERE T1.id_lactantes = ?
                 ORDER BY T1.fecha_cita DESC;
             """
-            reporte_data = cursor.execute(query, (id_lactante,)).fetchall()
+            reporte_data = conn.execute(query, (id_lactante,)).fetchall()
             reporte = [dict(row) for row in reporte_data]
             
-        lactantes = cursor.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes ORDER BY apellido_paterno").fetchall()
+        lactantes = conn.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes ORDER BY apellido_paterno").fetchall()
         return render.reportes_por_lactante(lactantes=lactantes, reporte_data=reporte)
-
-class VisualizacionCitas:
-    @rol_requerido('Administrador', 'Enfermera')
-    def GET(self):
-        conn = web.ctx._db
-        query = """
-            SELECT 
-                T1.id_citas, 
-                T1.fecha_cita, 
-                T1.hora_de_entrada,
-                T2.apellido_paterno AS lactante_apellido,
-                T3.nombre AS motivo_nombre,
-                T4.nombre AS atendido_por
-            FROM Citas AS T1
-            JOIN Lactantes AS T2 ON T1.id_lactantes = T2.id_lactantes
-            JOIN Motivo AS T3 ON T1.id_motivo = T3.id_motivo
-            JOIN Usuarios AS T4 ON T1.atendido_por_id_usuario = T4.id_usuario
-            ORDER BY T1.fecha_cita DESC;
-        """
-        citas = conn.execute(query).fetchall()
-        return render.visualizacion_citas(citas=citas)
-
-class VisualizacionLactantes:
-    @rol_requerido('Administrador', 'Enfermera')
-    def GET(self):
-        conn = web.ctx._db
-        query = """
-            SELECT 
-                T1.id_lactantes, 
-                T1.apellido_paterno AS lactante_apellido, 
-                T1.apellido_materno AS lactante_materno, 
-                T1.fecha_nacimiento, 
-                T1.genero,
-                T2.nombre AS nombre_madre,
-                T3.nombre AS area_nombre
-            FROM Lactantes AS T1
-            JOIN Madres AS T2 ON T1.id_madres = T2.id_madre
-            JOIN Area AS T3 ON T1.id_area = T3.id_area
-            ORDER BY T1.apellido_paterno;
-        """
-        lactantes = conn.execute(query).fetchall()
-        return render.visualizacion_lactantes(lactantes=lactantes)
-
-class VisualizacionUsuarios:
-    @rol_requerido('Administrador')
-    def GET(self):
-        conn = web.ctx._db
-        query = """
-            SELECT 
-                T1.id_usuario, 
-                T1.nombre, 
-                T1.num_telefono,
-                T2.nombre AS rol_nombre
-            FROM Usuarios AS T1
-            JOIN Rol AS T2 ON T1.id_rol = T2.id_rol
-            ORDER BY T2.nombre;
-        """
-        usuarios = conn.execute(query).fetchall()
-        return render.visualizacion_usuarios(usuarios=usuarios)
 
 class ReportesAPI:
     def POST(self):
@@ -648,16 +443,15 @@ class ReportesAPI:
             data = json.loads(web.data())
             report_type = data.get('reportType')
             
-            conn = web.ctx._db
-            cursor = conn.cursor()
+            conn = get_db()
             report_data = {}
 
             if report_type == "estadistica":
                 query_madres = "SELECT COUNT(*) AS total_madres FROM Madres;"
                 query_lactantes = "SELECT COUNT(*) AS total_lactantes FROM Lactantes;"
                 
-                total_madres = cursor.execute(query_madres).fetchone()['total_madres']
-                total_lactantes = cursor.execute(query_lactantes).fetchone()['total_lactantes']
+                total_madres = conn.execute(query_madres).fetchone()['total_madres']
+                total_lactantes = conn.execute(query_lactantes).fetchone()['total_lactantes']
 
                 report_data = {
                     "reporte": "Reporte de Estadísticas",
@@ -666,7 +460,7 @@ class ReportesAPI:
             
             elif report_type == "alojamiento_conjunto":
                 query = "SELECT T1.nombre AS nombre_madre, T1.apellido_paterno AS apellido_paterno_madre, T2.apellido_paterno AS apellido_paterno_lactante, T2.apellido_materno AS apellido_materno_lactante, T2.fecha_nacimiento FROM Madres AS T1 JOIN Lactantes AS T2 ON T1.id_madre = T2.id_madre;"
-                alojamiento_data = cursor.execute(query).fetchall()
+                alojamiento_data = conn.execute(query).fetchall()
                 report_data = {
                     "reporte": "Reporte de Alojamiento Conjunto",
                     "resultados": [dict(row) for row in alojamiento_data]
@@ -676,8 +470,8 @@ class ReportesAPI:
                 query_genero = "SELECT genero, COUNT(genero) AS total FROM Lactantes GROUP BY genero;"
                 query_citas = "SELECT COUNT(*) AS total_citas FROM Citas;"
 
-                genero_data = cursor.execute(query_genero).fetchall()
-                total_citas = cursor.execute(query_citas).fetchone()['total_citas']
+                genero_data = conn.execute(query_genero).fetchall()
+                total_citas = conn.execute(query_citas).fetchone()['total_citas']
 
                 report_data = {
                     "reporte": "Reporte Federal",
@@ -695,7 +489,7 @@ class ReportesAPI:
             contenido_json = json.dumps(report_data['resultados'])
             
             if id_usuario:
-                cursor.execute(
+                conn.execute(
                     "INSERT INTO Reportes (id_usuario, tipo, contenido) VALUES (?, ?, ?)",
                     (id_usuario, report_data['reporte'], contenido_json)
                 )
@@ -711,47 +505,28 @@ class ReportesAPI:
             print(f"Error en ReportesAPI: {e}")
             return json.dumps({"error": "Ocurrió un error al generar el reporte."})
 
+# --- Lógica de inicio del servidor ---
+app = web.application(urls, globals())
+session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'loggedin': False, 'rol_nombre': None})
 
-# --- Lógica de inicio del servidor (Sin cambios) ---
+def session_processor(handler):
+    web.ctx.session = session
+    return handler()
+
+app.add_processor(session_processor)
+
+def db_processor(handler):
+    web.ctx._db = get_db()
+    try:
+        return handler()
+    finally:
+        if hasattr(web.ctx, '_db'):
+            web.ctx._db.close()
+
+app.add_processor(db_processor)
+
+application = app.wsgifunc()
+
 if __name__ == "__main__":
     setup_database()
-    app = web.application(urls, globals())
-    session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'loggedin': False, 'rol_nombre': None})
-    
-    def session_processor(handler):
-        web.ctx.session = session
-        return handler()
-    
-    app.add_processor(session_processor)
-
-    def db_processor(handler):
-        web.ctx._db = get_db()
-        try:
-            return handler()
-        finally:
-            if hasattr(web.ctx, '_db'):
-                web.ctx._db.close()
-    
-    app.add_processor(db_processor)
     app.run()
-else:
-    setup_database()
-    app = web.application(urls, globals())
-    session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'loggedin': False, 'rol_nombre': None})
-    
-    def session_processor(handler):
-        web.ctx.session = session
-        return handler()
-
-    app.add_processor(session_processor)
-
-    def db_processor(handler):
-        web.ctx._db = get_db()
-        try:
-            return handler()
-        finally:
-            if hasattr(web.ctx, '_db'):
-                web.ctx._db.close()
-    
-    app.add_processor(db_processor)
-    application = app.wsgifunc()
