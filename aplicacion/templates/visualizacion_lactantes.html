@@ -4,206 +4,68 @@ $def with (lactantes)
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vínculo de Vida - Visualización de Lactantes</title>
+    <title>Vínculo de Vida - Ver Lactantes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style> body { font-family: ui-sans-serif, system-ui, sans-serif; } </style>
 </head>
 <body class="bg-[#FDF4F7] text-gray-800 font-sans min-h-screen flex flex-col items-center">
 
     <div class="min-h-screen p-4 sm:p-6 lg:p-8 w-full">
-        <!-- Encabezado de la página -->
+        <!-- Encabezado -->
         <header class="bg-[#E1A6CD] shadow-md rounded-lg p-3 mb-8 w-full">
-            <div class="container mx-auto flex justify-between items-center">
-                <!-- Menú desplegable a la izquierda -->
-                <div class="relative group">
-                    <button class="text-[#4A4A4A] text-lg font-bold focus:outline-none flex items-center p-2 rounded-md transition-colors duration-200 group-hover:bg-pink-100">
-                        ADMINISTRADOR
-                        <i class="fas fa-chevron-down ml-2 text-sm transition-transform duration-300 group-hover:rotate-180"></i>
-                    </button>
-                    <!-- Menú desplegable con las opciones de administrador -->
-                    <ul class="hidden group-hover:block absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-10 py-2">
-                        <li><a href="/enfermeras" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Área de Enfermeras</a></li>
-                        <li><a href="/registro_lactantes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registro lactantes</a></li>
-                        <li><a href="/registro_citas" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registro de citas</a></li>
-                        <li><a href="/reportes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Reportes</a></li>
-                        <li><a href="/administrador" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Área de Administrador</a></li>
-                        <li><a href="/administrador_registrar_usuario" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registrar Usuario</a></li>
-                        <li><a href="/administrador_ver_usuarios" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de usuarios</a></li>
-                        <li><a href="/administrador_ver_lactantes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de lactantes</a></li>
-                        <li><a href="/administrador_ver_citas" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de citas</a></li>
-                    </ul>
-                </div>
-                <!-- Enlace de Cerrar Sesión a la derecha -->
-                <a href="/logout" class="flex items-center text-[#6a003f] font-bold px-4 py-2 rounded-full space-x-2 bg-white border border-[#E1A6CD] hover:bg-gray-100 transition-colors duration-200" title="Cerrar Sesión">
-                    <div class="w-8 h-8 rounded-full border-2 border-[#6a003f] bg-white flex items-center justify-center">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </div>
+             <div class="container mx-auto flex justify-between items-center">
+                <div class="text-[#4A4A4A] text-lg font-bold p-2">VISUALIZACIÓN</div>
+                <a href="/logout" class="flex items-center text-[#6a003f] font-bold px-4 py-2 rounded-full space-x-2 bg-white border border-[#E1A6CD] hover:bg-gray-100" title="Cerrar Sesión">
+                    <div class="w-8 h-8 rounded-full border-2 border-[#6a003f] bg-white flex items-center justify-center"><i class="fas fa-sign-out-alt"></i></div>
                     <span class="hidden sm:block">Cerrar Sesión</span>
                 </a>
             </div>
         </header>
 
-        <!-- Contenedor principal de la tabla -->
-        <main class="main-container flex-grow flex flex-col items-center justify-start w-full px-4 sm:px-6 lg:px-8">
-            <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg max-w-7xl w-full">
-                <!-- Título principal con la flecha de regreso -->
-                <div class="flex items-center justify-between mb-6">
-                    <!-- Botón de regreso con el ícono de salida -->
-                    <a href="javascript:history.back()" class="bg-gray-400 hover:bg-gray-500 text-white p-3 rounded-full transition-colors duration-300 flex items-center justify-center">
+        <main class="flex-grow w-full px-4">
+            <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg max-w-6xl w-full mx-auto">
+                <div class="relative">
+                    <a href="javascript:history.back()" class="absolute left-0 top-1/2 -translate-y-1/2 text-2xl text-[#6a003f]" title="Regresar">
                         <i class="fas fa-arrow-left"></i>
                     </a>
-                    <!-- Título principal de la página -->
-                    <h1 class="text-2xl sm:text-3xl font-bold text-center text-[#6a003f] flex-grow">Visualización de Lactantes</h1>
-                    <!-- Espacio de relleno para la alineación del título -->
-                    <div class="w-12"></div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-center mb-10 text-[#6a003f]">
+                        Listado de Lactantes
+                    </h2>
                 </div>
-
-                <!-- Barra de búsqueda, ahora con un estilo más compacto -->
-                <div class="flex flex-col sm:flex-row justify-start items-center mb-6">
-                    <div class="relative w-full sm:w-1/2 mb-4 sm:mb-0">
-                        <input type="text" id="search-input-lactantes" placeholder="Buscar por apellido..." class="w-full pl-10 pr-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors">
-                        <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            <i class="fas fa-search"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Contenedor de la tabla para hacerla responsiva -->
+                
                 <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white rounded-lg shadow-md">
-                        <!-- Cabecera de la tabla -->
-                        <thead class="bg-[#F8C9D9] sticky-header">
+                    <table class="w-full border-collapse">
+                        <thead>
                             <tr>
-                                <th class="text-left py-3 px-4 font-semibold text-[#6A003F]">Primer Apellido</th>
-                                <th class="text-left py-3 px-4 font-semibold text-[#6A003F]">Segundo Apellido</th>
-                                <th class="text-center py-3 px-4 font-semibold text-[#6A003F]">Fecha de Nacimiento</th>
-                                <th class="text-center py-3 px-4 font-semibold text-[#6A003F]">Género</th>
-                                <th class="text-center py-3 px-4 font-semibold text-[#6A003F]">Discapacidad</th>
-                                <th class="text-center py-3 px-4 font-semibold text-[#6A003F]">Estado</th>
-                                <th class="text-center py-3 px-4 font-semibold text-[#6A003F]">Acciones</th>
+                                <th class="bg-[#f7e0e7] text-[#6a003f] font-bold text-left p-4 text-sm uppercase rounded-tl-lg">Apellido Paterno</th>
+                                <th class="bg-[#f7e0e7] text-[#6a003f] font-bold text-left p-4 text-sm uppercase">Apellido Materno</th>
+                                <th class="bg-[#f7e0e7] text-[#6a003f] font-bold text-left p-4 text-sm uppercase">Fecha Nacimiento</th>
+                                <th class="bg-[#f7e0e7] text-[#6a003f] font-bold text-left p-4 text-sm uppercase">Género</th>
+                                <th class="bg-[#f7e0e7] text-[#6a003f] font-bold text-left p-4 text-sm uppercase">Nombre de la Madre</th>
+                                <th class="bg-[#f7e0e7] text-[#6a003f] font-bold text-left p-4 text-sm uppercase rounded-tr-lg">Área</th>
                             </tr>
                         </thead>
-                        <!-- Cuerpo de la tabla con el bucle de web.py -->
-                        <tbody id="table-body-lactantes" class="text-gray-700">
-                            $for lactante in lactantes:
-                                <tr class="border-b border-[#E1A6CD] hover:bg-gray-50 transition-colors">
-                                    <!-- Se utiliza la sintaxis de corchetes para acceder a los valores del diccionario -->
-                                    <td class="py-3 px-4">$lactante['primer_apellido']</td>
-                                    <td class="py-3 px-4">$lactante['segundo_apellido']</td>
-                                    <td class="py-3 px-4 text-center">$lactante['fecha_nacimiento']</td>
-                                    <td class="py-3 px-4 text-center">$lactante['genero']</td>
-                                    <td class="py-3 px-4 text-center">$lactante['discapacidad']</td>
-                                    <td class="py-3 px-4 text-center">
-                                        <span class="px-2 py-1 rounded-full text-xs font-semibold
-                                            $if lactante['estado'] == 'Activo':
-                                                bg-green-200 text-green-800
-                                            $else:
-                                                bg-gray-200 text-gray-800
-                                        ">$lactante['estado']</span>
-                                    </td>
-                                    <td class="py-3 px-4 text-center">
-                                        <div class="flex justify-center space-x-2">
-                                            <button class="text-blue-500 hover:text-blue-700 transition-colors" title="Editar">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="text-red-500 hover:text-red-700 transition-colors" title="Eliminar">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                            <!-- Mensaje si no hay lactantes registrados -->
-                            $if not lactantes:
-                                <tr class="border-b border-[#E1A6CD] hover:bg-gray-50 transition-colors">
-                                    <td colspan="7" class="text-center py-4 text-gray-500">No hay lactantes registrados.</td>
+                        <tbody>
+                            $if lactantes:
+                                $for lactante in lactantes:
+                                    <tr class="border-b border-[#E4B4C5]">
+                                        <td class="p-4">$lactante['lactante_apellido']</td>
+                                        <td class="p-4">$lactante['lactante_materno']</td>
+                                        <td class="p-4">$lactante['fecha_nacimiento']</td>
+                                        <td class="p-4">$lactante['genero']</td>
+                                        <td class="p-4">$lactante['nombre_madre']</td>
+                                        <td class="p-4">$lactante['area_nombre']</td>
+                                    </tr>
+                            $else:
+                                <tr>
+                                    <td colspan="6" class="p-4 text-center text-gray-500 italic">No hay lactantes registrados.</td>
                                 </tr>
                         </tbody>
                     </table>
                 </div>
-
-                <!-- Botón de Guardar -->
-                <div class="mt-8 text-center">
-                    <button class="w-full sm:w-auto bg-[#F8C9D9] text-[#6A003F] font-bold py-3 px-12 rounded-full shadow-md transition-transform transform hover:scale-105 hover:bg-[#E4B4C5]">
-                        Guardar los Cambios
-                    </button>
-                </div>
             </div>
         </main>
     </div>
-
-    <!-- Modal para confirmar eliminación -->
-    <div id="delete-modal-lactantes" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full text-center">
-            <h3 class="text-lg font-bold mb-4">Confirmar Eliminación</h3>
-            <p class="mb-6">¿Estás seguro de que deseas eliminar este registro?</p>
-            <div class="flex justify-center space-x-4">
-                <button id="cancel-delete-lactantes" class="px-6 py-2 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                    Cancelar
-                </button>
-                <button id="confirm-delete-lactantes" class="px-6 py-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
-                    Eliminar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Script para la funcionalidad del menú desplegable, la tabla y los modales -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const searchInput = document.getElementById('search-input-lactantes');
-            const tableBody = document.getElementById('table-body-lactantes');
-            const deleteModal = document.getElementById('delete-modal-lactantes');
-            const confirmDeleteButton = document.getElementById('confirm-delete-lactantes');
-            const cancelDeleteButton = document.getElementById('cancel-delete-lactantes');
-
-            let rowToDelete = null;
-
-            // Función para filtrar la tabla al escribir en la barra de búsqueda
-            searchInput.addEventListener('input', (event) => {
-                const searchTerm = event.target.value.toLowerCase();
-                const rows = tableBody.querySelectorAll('tr');
-
-                rows.forEach(row => {
-                    const lactanteName = row.cells[0].textContent.toLowerCase();
-
-                    if (lactanteName.includes(searchTerm)) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
-            });
-
-            // Evento para abrir el modal de eliminación
-            tableBody.addEventListener('click', (event) => {
-                const deleteButton = event.target.closest('.text-red-500');
-                if (deleteButton) {
-                    const row = deleteButton.closest('tr');
-                    rowToDelete = row;
-                    deleteModal.classList.remove('hidden');
-                    deleteModal.classList.add('flex');
-                }
-            });
-
-            // Evento para confirmar la eliminación
-            confirmDeleteButton.addEventListener('click', () => {
-                if (rowToDelete) {
-                    rowToDelete.remove();
-                    rowToDelete = null;
-                    // Aquí puedes añadir la lógica para enviar una solicitud al servidor para eliminar el registro
-                }
-                deleteModal.classList.remove('flex');
-                deleteModal.classList.add('hidden');
-            });
-
-            // Evento para cancelar la eliminación
-            cancelDeleteButton.addEventListener('click', () => {
-                deleteModal.classList.remove('flex');
-                deleteModal.classList.add('hidden');
-                rowToDelete = null;
-            });
-        });
-    </script>
 </body>
 </html>

@@ -11,9 +11,11 @@ import datetime
 
 web.config.debug = False
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-render = web.template.render(template_dir)
+# --- CAMBIO: Se añade una variable global 'static' para las plantillas ---
+render = web.template.render(template_dir, globals={'static': '/static'})
 
-# --- 1. Definición de URLs y Mapeo de Clases ---
+
+# --- CAMBIO: Se añade una ruta para los archivos estáticos ---
 urls = (
     '/', 'Welcome',
     '/login', 'Login',
@@ -30,9 +32,21 @@ urls = (
     '/visualizacion_lactantes', 'VisualizacionLactantes',
     '/visualizacion_usuarios', 'VisualizacionUsuarios',
     '/api/generate_report', 'ReportesAPI',
+    '/static/(.*)', 'Static' # Nueva ruta
 )
 
-# --- 2. Configuración de la base de datos SQLite3 ---
+# --- CAMBIO: Se añade una clase para manejar los archivos estáticos ---
+class Static:
+    def GET(self, file):
+        try:
+            static_dir = os.path.join(os.path.dirname(__file__), 'static')
+            with open(os.path.join(static_dir, file), 'rb') as f:
+                return f.read()
+        except IOError:
+            raise web.notfound()
+
+
+# --- Configuración de la base de datos SQLite3 (Sin cambios) ---
 DB_FILE = 'vinculo_de_vida.db'
 
 def get_db():
@@ -238,7 +252,20 @@ def setup_database():
             conn.close()
             print("Conexión de configuración cerrada.")
 
-# --- 3. Decorador para requerir un rol específico (refactorizado para usar nombres) ---
+def log_auditoria(accion, tabla_afectada):
+    """Registra una acción de usuario en la tabla de Auditoria."""
+    conn = web.ctx._db
+    cursor = conn.cursor()
+    id_usuario = web.ctx.session.get('user_id')
+    if id_usuario:
+        try:
+            cursor.execute("INSERT INTO Auditoria (id_usuario, accion, tabla_afectada) VALUES (?, ?, ?)",
+                           (id_usuario, accion, tabla_afectada))
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"Error al registrar en auditoría: {e}")
+
+# --- Decorador (Sin cambios) ---
 def rol_requerido(*roles_permitidos):
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -246,10 +273,8 @@ def rol_requerido(*roles_permitidos):
             if rol_usuario in roles_permitidos:
                 return func(*args, **kwargs)
             else:
-                # Si no está logeado, redirigir al login
                 if not web.ctx.session.get('loggedin'):
                     raise web.seeother('/login')
-                # Si está logeado pero no tiene el rol, redirigir al área apropiada
                 elif rol_usuario == 'Administrador':
                     raise web.seeother('/administrador')
                 elif rol_usuario == 'Enfermera':
@@ -259,7 +284,7 @@ def rol_requerido(*roles_permitidos):
         return wrapper
     return decorator
 
-# --- 4. Clases del Manejador de Solicitudes (Lógica de la Aplicación) ---
+# --- Clases del Manejador de Solicitudes (Sin cambios en la lógica principal) ---
 class Welcome:
     def GET(self):
         return render.index()
@@ -281,7 +306,6 @@ class Login:
         
         password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
 
-        # Se obtiene el nombre del rol en lugar del ID
         query = """
             SELECT T1.id_usuario, T2.nombre as rol_nombre, T1.contraseña
             FROM Usuarios AS T1
@@ -330,8 +354,8 @@ class RegistroUsuario:
         contrasena = data.get('contrasena')
         id_rol = data.get('id_rol')
         
+        roles = cursor.execute("SELECT id_rol, nombre FROM Rol").fetchall()
         if not all([nombre, num_telefono, contrasena, id_rol]):
-            roles = cursor.execute("SELECT id_rol, nombre FROM Rol").fetchall()
             return render.administrador_registrar_usuario(roles=roles, message="Todos los campos son obligatorios.")
 
         try:
@@ -339,59 +363,96 @@ class RegistroUsuario:
             cursor.execute("INSERT INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES (?, ?, ?, ?)",
                            (nombre, num_telefono, password_hash, id_rol))
             conn.commit()
+            
+            log_auditoria(accion="Registro de nuevo usuario", tabla_afectada="Usuarios")
+            
             raise web.seeother('/visualizacion_usuarios')
         except sqlite3.IntegrityError:
-            roles = cursor.execute("SELECT id_rol, nombre FROM Rol").fetchall()
             return render.administrador_registrar_usuario(roles=roles, message="El número de teléfono ya está registrado.")
         except sqlite3.Error as e:
             print(f"Error al registrar usuario: {e}")
-            roles = cursor.execute("SELECT id_rol, nombre FROM Rol").fetchall()
-            return render.administrador_registrar_usuario(roles=roles, message=f"Error: {e}")
+            return render.administrador_registrar_usuario(roles=roles, message=f"Error inesperado al registrar usuario: {e}")
 
 class EnfermerasArea:
     @rol_requerido('Enfermera')
     def GET(self):
         return render.enfermeras_area()
 
+# --- CAMBIO: Lógica de RegistroCitas actualizada para el nuevo formulario ---
 class RegistroCitas:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
-        conn = web.ctx._db
-        lactantes = conn.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes ORDER BY apellido_paterno").fetchall()
-        motivos = conn.execute("SELECT id_motivo, nombre FROM Motivo ORDER BY nombre").fetchall()
-        return render.registro_citas(lactantes=lactantes, motivos=motivos, message="")
+        # El nuevo formulario no necesita datos precargados, solo renderiza la plantilla.
+        return render.registro_citas(message="")
 
     @rol_requerido('Administrador', 'Enfermera')
     def POST(self):
+        data = web.input()
         conn = web.ctx._db
         cursor = conn.cursor()
-        data = web.input()
-        
-        id_lactantes = data.get('id_lactantes')
-        id_motivo = data.get('id_motivo')
-        fecha_cita = data.get('fecha_cita')
-        hora_entrada = data.get('hora_de_entrada')
-        justificacion = data.get('justificacion')
-        subsecuente = 1 if data.get('subsecuente') == 'on' else 0
-        
-        if not all([id_lactantes, id_motivo, fecha_cita]):
-            lactantes = cursor.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes").fetchall()
-            motivos = cursor.execute("SELECT id_motivo, nombre FROM Motivo").fetchall()
-            return render.registro_citas(lactantes=lactantes, motivos=motivos, message="Los campos de lactante, motivo y fecha son obligatorios.")
 
         try:
+            # 1. Obtener datos del formulario
+            nombre_madre = data.get('nombre_madre', '').strip()
+            paterno_madre = data.get('apellido_paterno_madre', '').strip()
+            materno_madre = data.get('apellido_materno_madre', '').strip()
+            discapacidad_madre = data.get('discapacidad_madre', 'Ninguna')
+            
+            paterno_lactante = data.get('apellido_paterno_lactante', '').strip()
+            materno_lactante = data.get('apellido_materno_lactante', '').strip()
+
+            hora_llegada = data.get('hora_llegada')
+            subsecuente = 1 if data.get('subsecuente') == 'on' else 0
+
+            # 2. Validar campos obligatorios
+            if not all([nombre_madre, paterno_madre, paterno_lactante, hora_llegada]):
+                return render.registro_citas(message="Los nombres y apellidos de la madre, el primer apellido del lactante y la hora son obligatorios.")
+
+            # 3. Buscar o crear a la madre
+            cursor.execute("SELECT id_madre FROM Madres WHERE nombre = ? AND apellido_paterno = ?", (nombre_madre, paterno_madre))
+            madre_existente = cursor.fetchone()
+            
+            id_madre = None
+            if madre_existente:
+                id_madre = madre_existente['id_madre']
+            else:
+                # Si no existe, la creamos con un motivo por defecto
+                cursor.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES (?, ?, ?, ?, 1)",
+                               (nombre_madre, paterno_madre, materno_madre, discapacidad_madre))
+                id_madre = cursor.lastrowid
+                log_auditoria("Registro de nueva madre desde formulario de citas", "Madres")
+
+            # 4. Buscar al lactante asociado a esa madre
+            cursor.execute("SELECT id_lactantes FROM Lactantes WHERE id_madres = ? AND apellido_paterno = ?", (id_madre, paterno_lactante))
+            lactante_existente = cursor.fetchone()
+
+            if not lactante_existente:
+                return render.registro_citas(message=f"No se encontró un lactante con apellido '{paterno_lactante}' asociado a la madre. Por favor, registre al lactante primero.")
+            
+            id_lactante = lactante_existente['id_lactantes']
+
+            # 5. Agendar la cita
             atendido_por_id_usuario = web.ctx.session.get('user_id')
+            fecha_actual = datetime.date.today().isoformat()
+            
+            # Usamos un motivo por defecto ("Chequeo de rutina", ID 1)
+            id_motivo_defecto = 1 
+
             cursor.execute("""
                 INSERT INTO Citas (id_lactantes, id_motivo, atendido_por_id_usuario, fecha_cita, subsecuente, justificacion, hora_de_entrada) 
                 VALUES (?, ?, ?, ?, ?, ?, ?);
-            """, (id_lactantes, id_motivo, atendido_por_id_usuario, fecha_cita, subsecuente, justificacion, hora_entrada))
+            """, (id_lactante, id_motivo_defecto, atendido_por_id_usuario, fecha_actual, subsecuente, "Cita agendada desde formulario general", hora_llegada))
+            
             conn.commit()
+            log_auditoria(f"Registro de nueva cita para lactante ID {id_lactante}", "Citas")
+            
             raise web.seeother('/visualizacion_citas')
+
         except sqlite3.Error as e:
             conn.rollback()
-            lactantes = cursor.execute("SELECT id_lactantes, apellido_paterno FROM Lactantes").fetchall()
-            motivos = cursor.execute("SELECT id_motivo, nombre FROM Motivo").fetchall()
-            return render.registro_citas(lactantes=lactantes, motivos=motivos, message=f"Error al registrar cita: {e}")
+            print(f"Error al registrar cita: {e}")
+            return render.registro_citas(message=f"Error de base de datos al registrar la cita: {e}")
+
 
 class RegistroLactantes:
     @rol_requerido('Administrador', 'Enfermera')
@@ -408,9 +469,9 @@ class RegistroLactantes:
         data = web.input()
         conn = web.ctx._db
         cursor = conn.cursor()
+        areas = cursor.execute("SELECT id_area, nombre FROM Area").fetchall()
         
         try:
-            # --- Obtener y validar datos del formulario del lactante ---
             apellido_paterno_lactante = data.get('apellido_paterno_lactante', '').strip()
             apellido_materno_lactante = data.get('apellido_materno_lactante', '').strip()
             fecha_nacimiento_str = data.get('fecha_nacimiento_lactante', '').strip()
@@ -418,26 +479,21 @@ class RegistroLactantes:
             discapacidad_lactante = data.get('discapacidad_lactante', '').strip()
             area_lactante_nombre = data.get('area_lactante', '').strip()
             
-            # Validación de campos obligatorios
             if not all([apellido_paterno_lactante, fecha_nacimiento_str, genero_lactante, area_lactante_nombre]):
                 error_msg = "Los campos de apellido paterno, fecha, género y servicio del lactante son obligatorios."
-                areas = cursor.execute("SELECT id_area, nombre FROM Area").fetchall()
                 if web.ctx.session.get('rol_nombre') == 'Administrador':
                     return render.registro_lactantes(return_url='/administrador', error_message=error_msg, areas=areas)
                 else:
                     return render.registro_lactantes(return_url='/enfermeras', error_message=error_msg, areas=areas)
             
-            # --- Lógica de la madre (buscar o crear) ---
             nombre_madre = data.get('nombre_madre', '').strip()
             apellido_paterno_madre = data.get('apellido_paterno_madre', '').strip()
             
             if nombre_madre and apellido_paterno_madre:
-                # Si se proporcionan datos de la madre, se registra una nueva
                 cursor.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES (?, ?, ?, ?, ?)",
                                (nombre_madre, apellido_paterno_madre, data.get('apellido_materno_madre', ''), data.get('discapacidad_madre', ''), 1))
                 id_madre = cursor.lastrowid
             else:
-                # Si no se proporcionan datos de la madre, se usa la madre "desconocida"
                 id_madre_row = cursor.execute("SELECT id_madre FROM Madres WHERE nombre = 'Desconocida'").fetchone()
                 if not id_madre_row:
                     cursor.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES ('Desconocida', 'Desconocido', 'Desconocido', 'Ninguna', 1);")
@@ -445,18 +501,15 @@ class RegistroLactantes:
                 else:
                     id_madre = id_madre_row['id_madre']
 
-            # Buscar el ID del área para el lactante
             area_id_row = cursor.execute("SELECT id_area FROM Area WHERE nombre = ?", (area_lactante_nombre,)).fetchone()
             if not area_id_row:
                 error_msg = f"Error: El área '{area_lactante_nombre}' no existe en la base de datos."
-                areas = cursor.execute("SELECT id_area, nombre FROM Area").fetchall()
                 if web.ctx.session.get('rol_nombre') == 'Administrador':
                     return render.registro_lactantes(return_url='/administrador', error_message=error_msg, areas=areas)
                 else:
                     return render.registro_lactantes(return_url='/enfermeras', error_message=error_msg, areas=areas)
             id_area = area_id_row['id_area']
 
-            # Insertar al lactante
             cursor.execute("""
                 INSERT INTO Lactantes (id_madres, id_area, apellido_paterno, apellido_materno, fecha_nacimiento, genero, estado, discapacidad) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?);
@@ -472,12 +525,14 @@ class RegistroLactantes:
             ))
             
             conn.commit()
+            
+            log_auditoria(accion="Registro de nuevo lactante", tabla_afectada="Lactantes")
+            
             raise web.seeother('/visualizacion_lactantes')
         
         except sqlite3.Error as e:
             conn.rollback()
             error_msg = f"Error al registrar: {e}"
-            areas = cursor.execute("SELECT id_area, nombre FROM Area").fetchall()
             if web.ctx.session.get('rol_nombre') == 'Administrador':
                 return render.registro_lactantes(return_url='/administrador', error_message=error_msg, areas=areas)
             else:
@@ -491,14 +546,9 @@ class ReportesArea:
 class ReportesGenerales:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
-        return render.reportes_generales()
-
-    @rol_requerido('Administrador', 'Enfermera')
-    def POST(self):
-        data = web.input()
-        print("Datos del formulario de reportes generales recibidos:", data)
-        # Lógica para generar y procesar el reporte (ejemplo)
-        raise web.seeother('/reportes_generales')
+        conn = web.ctx._db
+        reports = conn.execute("SELECT tipo, fecha_generado FROM Reportes ORDER BY fecha_generado DESC").fetchall()
+        return render.reportes_generales(reports=reports)
 
 class ReportesPorLactante:
     @rol_requerido('Administrador', 'Enfermera')
@@ -611,27 +661,12 @@ class ReportesAPI:
 
                 report_data = {
                     "reporte": "Reporte de Estadísticas",
-                    "resultados": {
-                        "total_madres": total_madres,
-                        "total_lactantes": total_lactantes
-                    }
+                    "resultados": { "total_madres": total_madres, "total_lactantes": total_lactantes }
                 }
             
             elif report_type == "alojamiento_conjunto":
-                query = """
-                SELECT
-                    T1.nombre AS nombre_madre,
-                    T1.apellido_paterno AS apellido_paterno_madre,
-                    T2.apellido_paterno AS apellido_paterno_lactante,
-                    T2.apellido_materno AS apellido_materno_lactante,
-                    T2.fecha_nacimiento
-                FROM
-                    Madres AS T1
-                JOIN
-                    Lactantes AS T2 ON T1.id_madre = T2.id_madre;
-                """
+                query = "SELECT T1.nombre AS nombre_madre, T1.apellido_paterno AS apellido_paterno_madre, T2.apellido_paterno AS apellido_paterno_lactante, T2.apellido_materno AS apellido_materno_lactante, T2.fecha_nacimiento FROM Madres AS T1 JOIN Lactantes AS T2 ON T1.id_madre = T2.id_madre;"
                 alojamiento_data = cursor.execute(query).fetchall()
-
                 report_data = {
                     "reporte": "Reporte de Alojamiento Conjunto",
                     "resultados": [dict(row) for row in alojamiento_data]
@@ -656,6 +691,17 @@ class ReportesAPI:
                 web.ctx.status = '400 Bad Request'
                 return json.dumps({"error": "Tipo de reporte no válido."})
 
+            id_usuario = web.ctx.session.get('user_id')
+            contenido_json = json.dumps(report_data['resultados'])
+            
+            if id_usuario:
+                cursor.execute(
+                    "INSERT INTO Reportes (id_usuario, tipo, contenido) VALUES (?, ?, ?)",
+                    (id_usuario, report_data['reporte'], contenido_json)
+                )
+                conn.commit()
+                log_auditoria(f"Generación de reporte: {report_data['reporte']}", "Reportes")
+
             web.header('Content-Type', 'application/json')
             return json.dumps(report_data)
 
@@ -665,13 +711,13 @@ class ReportesAPI:
             print(f"Error en ReportesAPI: {e}")
             return json.dumps({"error": "Ocurrió un error al generar el reporte."})
 
-# --- 5. Lógica de inicio del servidor ---
+
+# --- Lógica de inicio del servidor (Sin cambios) ---
 if __name__ == "__main__":
     setup_database()
     app = web.application(urls, globals())
     session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'loggedin': False, 'rol_nombre': None})
     
-    # Procesador para hacer la sesión accesible en web.ctx
     def session_processor(handler):
         web.ctx.session = session
         return handler()
@@ -693,7 +739,6 @@ else:
     app = web.application(urls, globals())
     session = web.session.Session(app, web.session.DiskStore('sessions'), initializer={'loggedin': False, 'rol_nombre': None})
     
-    # Procesador para hacer la sesión accesible en web.ctx
     def session_processor(handler):
         web.ctx.session = session
         return handler()
@@ -710,4 +755,3 @@ else:
     
     app.add_processor(db_processor)
     application = app.wsgifunc()
-

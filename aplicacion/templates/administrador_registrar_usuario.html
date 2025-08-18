@@ -4,294 +4,95 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Usuario</title>
-    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <style>
-        /* Custom styles for typography */
-        body {
-            font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-        }
-
-        /* Styles for the modal window (success/error message) */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 50;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border-radius: 1rem;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 400px;
-            text-align: center;
-        }
+    <style> 
+        body { 
+            font-family: ui-sans-serif, system-ui, sans-serif; 
+        } 
     </style>
 </head>
-<body class="bg-[#FDF4F7] text-gray-800 font-sans min-h-screen flex flex-col items-center">
+<body class="bg-[#FDF4F7] flex flex-col items-center min-h-screen">
 
-    <div class="min-h-screen p-4 sm:p-6 lg:p-8 w-full">
-        <!-- Page Header -->
+    <div class="w-full p-4 sm:p-6 lg:p-8">
+        <!-- Encabezado -->
         <header class="bg-[#E1A6CD] shadow-md rounded-lg p-3 mb-8 w-full">
             <div class="container mx-auto flex justify-between items-center">
-                
-                <!-- Dropdown Menu on the left -->
-                <div class="relative group" id="menu-container">
-                    <!-- Dropdown menu button -->
-                    <button id="menu-button" class="text-[#4A4A4A] text-lg font-bold focus:outline-none flex items-center p-2 rounded-md transition-colors duration-200 group-hover:bg-pink-100">
-                        ADMINISTRADOR
-                        <i class="fas fa-chevron-down ml-2 text-sm transition-transform duration-300 group-hover:rotate-180"></i>
-                    </button>
-                    <!-- Dropdown menu content -->
-                    <ul id="dropdown-menu" class="hidden group-hover:block absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-10 py-2">
-                        <li><a href="/administrador" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Bienvenido</a></li>
-                        <li><a href="/administrador_registrar_usuario" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Creación de Usuarios</a></li>
-                        <li><a href="/administrador_ver_usuarios" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de Usuarios</a></li>
-                        <li><a href="/enfermeras" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Área de Enfermeras</a></li>
-                        <li><a href="/registro_lactantes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registro de Lactantes</a></li>
-                        <li><a href="/registro_citas" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registro de Citas</a></li>
-                        <li><a href="/visualizacion_citas" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de Citas</a></li>
-                        <li><a href="/visualizacion_lactantes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de Lactantes</a></li>
-                        <li><a href="/reportes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Creación de Reportes</a></li>
-                    </ul>
-                </div>
-                
-                <!-- Logout link on the right -->
-                <a href="/logout" class="flex items-center text-[#6a003f] font-bold px-4 py-2 rounded-full space-x-2 bg-white border border-[#E1A6CD] hover:bg-gray-100 transition-colors duration-200" title="Cerrar Sesión">
-                    <div class="w-8 h-8 rounded-full border-2 border-[#6a003f] bg-white flex items-center justify-center">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </div>
+                <h1 class="text-[#4A4A4A] text-xl font-bold">ADMINISTRADOR</h1>
+                <a href="/logout" class="flex items-center text-[#6a003f] font-bold px-4 py-2 rounded-full space-x-2 bg-white border border-[#E1A6CD] hover:bg-gray-100 transition" title="Cerrar Sesión">
+                    <div class="w-8 h-8 rounded-full border-2 border-[#6a003f] bg-white flex items-center justify-center"><i class="fas fa-sign-out-alt"></i></div>
                     <span class="hidden sm:block">Cerrar Sesión</span>
                 </a>
             </div>
         </header>
 
-        <!-- Main form container -->
-        <main class="flex-grow flex items-center justify-center w-full px-4 sm:px-6 lg:px-8">
-            <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg max-w-4xl w-full relative">
-                <!-- Back arrow on the left border -->
-                <a href="#" class="absolute left-8 top-8 text-[#6a003f] text-3xl hover:text-[#E1A6CD] transition-colors duration-200" title="Regresar">
+        <!-- Contenedor del formulario -->
+        <main class="flex-grow flex items-center justify-center w-full">
+            <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg max-w-2xl w-full relative">
+                <a href="/administrador" class="absolute left-8 top-8 text-[#6a003f] text-3xl hover:text-[#E1A6CD] transition" title="Regresar">
                     <i class="fas fa-arrow-left"></i>
                 </a>
+                <h2 class="text-2xl sm:text-3xl font-bold text-center mb-8 text-[#6a003f]">Registrar Nuevo Usuario</h2>
                 
-                <!-- Centered title -->
-                <h2 class="text-3xl font-bold text-[#6a003f] text-center mb-6">Registro de Usuario</h2>
-                
-                <form id="registration-form" class="space-y-6">
-                    <!-- Row 1: Names and Surnames -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <div>
-                            <label for="nombre" class="block text-left font-semibold text-[#6a003f] mb-2">Nombre</label>
-                            <input type="text" id="nombre" name="nombre" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD]">
-                        </div>
-                        <div>
-                            <label for="primer-apellido" class="block text-left font-semibold text-[#6a003f] mb-2">Primer apellido</label>
-                            <input type="text" id="primer-apellido" name="primerApellido" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD]">
-                        </div>
-                        <div>
-                            <label for="segundo-apellido" class="block text-left font-semibold text-[#6a003f] mb-2">Segundo apellido</label>
-                            <input type="text" id="segundo-apellido" name="segundoApellido" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD]">
+                <!-- SIMULACIÓN: Este es el bloque que aparecería si la variable 'message' tuviera contenido -->
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <span>El correo electrónico ya está en uso. Por favor, elige otro.</span>
+                </div>
+
+                <form id="user-form" action="/administrador_registrar_usuario" method="post" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <input id="nombre" name="nombre" type="text" placeholder="Nombre(s)" required class="md:col-span-2 w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                        <input id="primer_apellido" name="primer_apellido" type="text" placeholder="Primer Apellido" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                        <input id="segundo_apellido" name="segundo_apellido" type="text" placeholder="Segundo Apellido" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                        <input id="contrasena" name="contrasena" type="password" placeholder="Contraseña" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                        <input id="verificar_contrasena" name="verificar_contrasena" type="password" placeholder="Verificar Contraseña" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                    </div>
+                    <div class="relative">
+                        <label for="id_rol" class="sr-only">Rol del Usuario</label>
+                        <select id="id_rol" name="id_rol" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] appearance-none">
+                            <option value="">Seleccione un Rol</option>
+                            <!-- SIMULACIÓN: Estas opciones serían generadas por el bucle 'for role in roles' -->
+                            <option value="1">Administrador</option>
+                            <option value="2">Enfermera</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-[#6a003f]">
+                            <i class="fas fa-chevron-down"></i>
                         </div>
                     </div>
-                    <!-- Row 2: Role, Password, and Verification -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <div>
-                            <label for="role" class="block text-left font-semibold text-[#6a003f] mb-2">Rol</label>
-                            <div class="relative">
-                                <select id="role" name="role" required class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD] appearance-none">
-                                    <option value="enfermera">Enfermera</option>
-                                    <option value="administrador">Administrador</option>
-                                </select>
-                                <i class="fas fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-[#6a003f] pointer-events-none"></i>
-                            </div>
-                        </div>
-                        <div>
-                            <label for="password" class="block text-left font-semibold text-[#6a003f] mb-2">Contraseña</label>
-                            <input type="password" id="password" name="password" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD]">
-                        </div>
-                        <div>
-                            <label for="verify-password" class="block text-left font-semibold text-[#6a003f] mb-2">Verificar contraseña</label>
-                            <input type="password" id="verify-password" name="verifyPassword" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#E1A6CD] focus:border-[#E1A6CD]">
-                        </div>
-                    </div>
-                    <!-- Submit button -->
-                    <div>
-                        <button type="submit" class="w-full mt-4 px-6 py-3 bg-[#E6C5D4] text-[#6A003F] font-bold rounded-lg shadow-md hover:bg-[#E4B4C5] transition-colors duration-200">
-                            Registrar Usuario
+                    <div class="text-center pt-4">
+                        <button type="submit" class="w-full sm:w-2/3 py-3 bg-[#F8C9D9] text-[#6A003F] font-bold rounded-full shadow-md transition hover:bg-[#E4B4C5] transform hover:scale-105">
+                            Crear Usuario
                         </button>
                     </div>
                 </form>
             </div>
         </main>
-        
-        <!-- Footer -->
-        <footer class="w-full text-center py-4 text-[#6a003f] bg-[#fce8ee] mt-auto">
-            <!-- The phrase has been removed. -->
-        </footer>
     </div>
 
-    <!-- Modal window for messages -->
-    <div id="message-modal" class="modal">
-        <div class="modal-content">
-            <p id="modal-message" class="text-lg text-gray-800 mb-4"></p>
-            <button id="modal-close-button" class="px-4 py-2 bg-[#E6C5D4] text-[#6A003F] font-bold rounded-lg hover:bg-[#E4B4C5]">Cerrar</button>
-        </div>
-    </div>
-
-    <!-- Load Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-firestore.js"></script>
-
-    <!-- Script for the dropdown menu and registration form functionality -->
-    <script>
-        // Dropdown menu functionality
-        const menuButton = document.getElementById('menu-button');
-        const dropdownMenu = document.getElementById('dropdown-menu');
-        const menuContainer = document.getElementById('menu-container');
-
-        menuButton.addEventListener('click', (event) => {
-            event.stopPropagation();
-            dropdownMenu.classList.toggle('hidden');
-        });
-
-        document.addEventListener('click', (event) => {
-            if (!menuContainer.contains(event.target)) {
-                dropdownMenu.classList.add('hidden');
-            }
-        });
-        
-        //-------------------------------------------------------------
-        // Firebase logic for user registration
-        //-------------------------------------------------------------
-
-        // Global platform variables
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
-        
-        // DOM elements
-        const registrationForm = document.getElementById('registration-form');
-        const nombreInput = document.getElementById('nombre');
-        const primerApellidoInput = document.getElementById('primer-apellido');
-        const segundoApellidoInput = document.getElementById('segundo-apellido');
-        const roleSelect = document.getElementById('role');
-        const passwordInput = document.getElementById('password');
-        const verifyPasswordInput = document.getElementById('verify-password');
-        const messageModal = document.getElementById('message-modal');
-        const modalMessage = document.getElementById('modal-message');
-        const modalCloseButton = document.getElementById('modal-close-button');
-
-        // Function to show the modal with a message
-        const showModal = (message) => {
-            modalMessage.textContent = message;
-            messageModal.style.display = 'flex';
-        };
-
-        // Click handler to close the modal
-        modalCloseButton.addEventListener('click', () => {
-            messageModal.style.display = 'none';
-        });
-
-        // Authenticate the current session user
-        const authenticateUser = async () => {
-            try {
-                if (initialAuthToken) {
-                    await auth.signInWithCustomToken(initialAuthToken);
-                } else {
-                    await auth.signInAnonymously();
-                }
-                console.log('User authenticated successfully.');
-            } catch (error) {
-                console.error('Error authenticating user:', error);
-            }
-        };
-
-        // Call the authentication function on page load
-        window.onload = authenticateUser;
-
-        // Form submission handler
-        registrationForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const nombre = nombreInput.value.trim();
-            const primerApellido = primerApellidoInput.value.trim();
-            const segundoApellido = segundoApellidoInput.value.trim();
-            const role = roleSelect.value;
-            const password = passwordInput.value;
-            const verifyPassword = verifyPasswordInput.value;
-
-            // Check if passwords match
+<script>
+    // Este script se carga desde un archivo externo, pero se incluye aquí para referencia.
+    // Asegúrate de que tu archivo static/form_helpers.js contenga esta lógica si es necesario.
+    const form = document.getElementById('user-form');
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            const password = document.getElementById('contrasena').value;
+            const verifyPassword = document.getElementById('verificar_contrasena').value;
             if (password !== verifyPassword) {
-                showModal('Las contraseñas no coinciden. Por favor, inténtalo de nuevo.');
-                return;
-            }
-            
-            // Generate a unique email
-            const email = `${nombre.toLowerCase().replace(/\s+/g, '')}.${primerApellido.toLowerCase().replace(/\s+/g, '')}.${Date.now()}@example.com`;
-
-            try {
-                // 1. Create user in Firebase Authentication
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                const user = userCredential.user;
-
-                // 2. Save additional user data in Firestore
-                const userData = {
-                    nombre: nombre,
-                    primerApellido: primerApellido,
-                    segundoApellido: segundoApellido,
-                    role: role,
-                    email: email,
-                    createdAt: new Date()
-                };
-                
-                // Save to the public users collection
-                const usersCollectionRef = db.collection(`artifacts/${appId}/public/data/users`);
-                await usersCollectionRef.doc(user.uid).set(userData);
-
-                // Show success message
-                showModal(`Usuario registrado con éxito! El correo electrónico es: ${email}`);
-
-                // Clear the form
-                registrationForm.reset();
-
-            } catch (error) {
-                console.error('Error al registrar el usuario:', error);
-                let errorMessage = 'Error al registrar el usuario. Por favor, inténtalo de nuevo.';
-                // Handle specific Firebase Auth errors
-                switch(error.code) {
-                    case 'auth/weak-password':
-                        errorMessage = 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres.';
-                        break;
-                    case 'auth/email-already-in-use':
-                        errorMessage = 'El correo electrónico ya está en uso por otra cuenta.';
-                        break;
-                    default:
-                        errorMessage = `Ocurrió un error: ${error.message}`;
-                        break;
+                // Prevenimos la creación de múltiples mensajes de error
+                const existingError = form.querySelector('.custom-error-message');
+                if (existingError) {
+                    existingError.remove();
                 }
-                showModal(errorMessage);
+                
+                // Usamos un cuadro de diálogo personalizado en lugar de alert()
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 custom-error-message';
+                messageDiv.textContent = 'Las contraseñas no coinciden. Por favor, inténtelo de nuevo.';
+                form.prepend(messageDiv);
+                event.preventDefault(); // Detiene el envío del formulario
             }
         });
-    </script>
-
+    }
+</script>
 </body>
 </html>

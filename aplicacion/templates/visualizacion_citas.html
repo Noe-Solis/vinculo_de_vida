@@ -4,61 +4,82 @@ $def with (citas)
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vínculo de Vida - Visualización de Citas</title>
+    <title>Vínculo de Vida - Ver Citas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style> body { font-family: ui-sans-serif, system-ui, sans-serif; } </style>
 </head>
 <body class="bg-[#FDF4F7] text-gray-800 font-sans min-h-screen flex flex-col items-center">
 
     <div class="min-h-screen p-4 sm:p-6 lg:p-8 w-full">
+        <!-- Encabezado con Menú -->
         <header class="bg-[#E1A6CD] shadow-md rounded-lg p-3 mb-8 w-full">
             <div class="container mx-auto flex justify-between items-center">
-                <div class="relative group">
-                    <button class="text-[#4A4A4A] text-lg font-bold focus:outline-none flex items-center p-2 rounded-md transition-colors duration-200 group-hover:bg-pink-100">
-                        ADMINISTRADOR
+                <div class="relative group" id="menu-container">
+                    <button id="menu-button" class="text-[#4A4A4A] text-lg font-bold focus:outline-none flex items-center p-2 rounded-md transition-colors duration-200 group-hover:bg-pink-100">
+                        MENÚ
                         <i class="fas fa-chevron-down ml-2 text-sm transition-transform duration-300 group-hover:rotate-180"></i>
                     </button>
-                    <ul class="hidden group-hover:block absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-10 py-2">
-                        <li><a href="/enfermeras" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Área de Enfermeras</a></li>
-                        <li><a href="/registro_lactantes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registro lactantes</a></li>
-                        <li><a href="/registro_citas" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registro de citas</a></li>
-                        <li><a href="/reportes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Reportes</a></li>
-                        <li><a href="/administrador" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Área de Administrador</a></li>
-                        <li><a href="/administrador_registrar_usuario" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registrar Usuario</a></li>
-                        <li><a href="/administrador_ver_usuarios" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de usuarios</a></li>
-                        <li><a href="/administrador_ver_lactantes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de lactantes</a></li>
-                        <li><a href="/administrador_ver_citas" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Visualización de citas</a></li>
+                    <ul id="dropdown-menu" class="hidden group-hover:block absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-10 py-2">
+                        <li><a href="/administrador" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Área Admin</a></li>
+                        <li><a href="/enfermeras" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Área Enfermeras</a></li>
+                        <li><a href="/registro_lactantes" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registro de Lactantes</a></li>
+                        <li><a href="/registro_citas" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Registro de Citas</a></li>
                     </ul>
                 </div>
-                <a href="/logout" class="flex items-center text-[#6a003f] font-bold px-4 py-2 rounded-full space-x-2 bg-white border border-[#E1A6CD] hover:bg-gray-100 transition-colors duration-200" title="Cerrar Sesión">
-                    <div class="w-8 h-8 rounded-full border-2 border-[#6a003f] bg-white flex items-center justify-center">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </div>
+                <a href="/logout" class="flex items-center text-[#6a003f] font-bold px-4 py-2 rounded-full space-x-2 bg-white border border-[#E1A6CD] hover:bg-gray-100" title="Cerrar Sesión">
+                    <div class="w-8 h-8 rounded-full border-2 border-[#6a003f] bg-white flex items-center justify-center"><i class="fas fa-sign-out-alt"></i></div>
                     <span class="hidden sm:block">Cerrar Sesión</span>
                 </a>
             </div>
         </header>
 
-        <main class="main-container flex-grow flex flex-col items-center justify-start w-full px-4 sm:px-6 lg:px-8">
-            <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg max-w-7xl w-full">
-                <div class="flex items-center justify-between mb-6">
-                    <a href="javascript:history.back()" class="bg-gray-400 hover:bg-gray-500 text-white p-3 rounded-full transition-colors duration-300 flex items-center justify-center">
-                        <i class="fas fa-arrow-left"></i>
-                    </a>
-                    <h1 class="text-2xl sm:text-3xl font-bold text-center text-[#6a003f] flex-grow">Visualización de Citas</h1>
-                    <div class="w-12"></div>
-                </div>
-
-                <div class="flex flex-col sm:flex-row justify-start items-center mb-6">
-                    <div class="relative w-full sm:w-1/2 mb-4 sm:mb-0">
-                        <input type="text" id="search-input-citas" placeholder="Buscar por lactante..." class="w-full pl-10 pr-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] transition-colors">
-                        <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            <i class="fas fa-search"></i>
-                        </div>
-                    </div>
+        <!-- Contenido principal -->
+        <main class="flex-grow w-full px-4">
+            <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg w-full">
+                <h2 class="text-2xl sm:text-3xl font-bold text-center mb-10 text-[#6a003f]">Citas Registradas</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border border-gray-200">
+                        <thead class="bg-[#fce8ee]">
+                            <tr>
+                                <th class="py-3 px-4 border-b text-left text-[#6a003f] font-bold">Fecha</th>
+                                <th class="py-3 px-4 border-b text-left text-[#6a003f] font-bold">Hora</th>
+                                <th class="py-3 px-4 border-b text-left text-[#6a003f] font-bold">Apellido Lactante</th>
+                                <th class="py-3 px-4 border-b text-left text-[#6a003f] font-bold">Motivo</th>
+                                <th class="py-3 px-4 border-b text-left text-[#6a003f] font-bold">Atendido Por</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            $for cita in citas:
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-3 px-4 border-b">$cita['fecha_cita']</td>
+                                    <td class="py-3 px-4 border-b">$cita['hora_de_entrada']</td>
+                                    <td class="py-3 px-4 border-b">$cita['lactante_apellido']</td>
+                                    <td class="py-3 px-4 border-b">$cita['motivo_nombre']</td>
+                                    <td class="py-3 px-4 border-b">$cita['atendido_por']</td>
+                                </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </main>
     </div>
+
+    <script>
+        const menuButton = document.getElementById('menu-button');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        const menuContainer = document.getElementById('menu-container');
+        if (menuButton) {
+            menuButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                dropdownMenu.classList.toggle('hidden');
+            });
+        }
+        document.addEventListener('click', (event) => {
+            if (menuContainer && !menuContainer.contains(event.target)) {
+                dropdownMenu.classList.add('hidden');
+            }
+        });
+    </script>
 </body>
 </html>
