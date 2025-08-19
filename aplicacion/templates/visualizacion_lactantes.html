@@ -1,4 +1,4 @@
-$def with (lactantes)
+$def with (lactantes, areas)
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -50,13 +50,14 @@ $def with (lactantes)
                             $if lactantes:
                                 $for lactante in lactantes:
                                     <tr class="border-b border-[#E4B4C5]">
-                                        <td class="p-4">$lactante['lactante_apellido']</td>
-                                        <td class="p-4">$lactante['lactante_materno']</td>
-                                        <td class="p-4">$lactante['fecha_nacimiento']</td>
-                                        <td class="p-4">$lactante['genero']</td>
-                                        <td class="p-4">$lactante['nombre_madre']</td>
-                                        <td class="p-4">$lactante['area_nombre']</td>
+                                        <td class="p-4">$lactante[1]</td>
+                                        <td class="p-4">$lactante[2]</td>
+                                        <td class="p-4">$lactante[3]</td>
+                                        <td class="p-4">$lactante[4]</td>
+                                        <td class="p-4">$lactante[8]</td>
+                                        <td class="p-4">$lactante[9]</td>
                                     </tr>
+                            
                             $else:
                                 <tr>
                                     <td colspan="6" class="p-4 text-center text-gray-500 italic">No hay lactantes registrados.</td>

@@ -1,10 +1,10 @@
-$def with (roles, message)
+$def with (info_actual, roles, message)
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Usuario</title>
+    <title>Editar usuario</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style> 
@@ -41,20 +41,20 @@ $def with (roles, message)
                         <span>$message</span>
                     </div>
 
-                <form id="user-form" action="/administrador_registrar_usuario" method="post" class="space-y-6">
+                <form id="user-form" method="post" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <input id="nombre" name="nombre" type="text" placeholder="Nombre(s)" required class="md:col-span-2 w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
-                        <input id="num_telefono" name="num_telefono" type="number" placeholder="Numero de telefono" required class="md:col-span-2 w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
-                        <input id="contrasena" name="contrasena" type="password" placeholder="Contraseña" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
-                        <input id="verificar_contrasena" name="verificar_contrasena" type="password" placeholder="Verificar Contraseña" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                        <input id="nombre" name="nombre" type="text" placeholder="Nombre(s)" value="$info_actual['nombre']" class="md:col-span-2 w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                        <input id="num_telefono" name="num_telefono" type="text" placeholder="Numero de telefono" value="$info_actual['num_telefono']" class="md:col-span-2 w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                        <input id="contrasena" name="contrasena" type="password" placeholder="Cambiar Contraseña" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                        <input id="verificar_contrasena" name="verificar_contrasena" type="password" placeholder="Verificar Contraseña" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
                     </div>
                     <div class="relative">
                         <label for="id_rol" class="sr-only">Rol del Usuario</label>
-                        <select id="id_rol" name="id_rol" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] appearance-none">
+                        <select id="id_rol" name="id_rol" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD] appearance-none">
                             <option value="">Seleccione un Rol</option>
                             <!-- SIMULACIÓN: Estas opciones serían generadas por el bucle 'for role in roles' -->
                             $for rol in roles:
-                                <option value=$rol[0]>$rol[1]</option>
+                                <option value=$rol['id_rol']>$rol['nombre']</option>
                         </select>
                         <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-[#6a003f]">
                             <i class="fas fa-chevron-down"></i>

@@ -51,6 +51,7 @@ $def with (usuarios)
                                 <th class="py-3 px-4 border-b text-left text-[#6a003f] font-bold">Nombre</th>
                                 <th class="py-3 px-4 border-b text-left text-[#6a003f] font-bold">Teléfono</th>
                                 <th class="py-3 px-4 border-b text-left text-[#6a003f] font-bold">Rol</th>
+                                <th class="py-3 px-4 border-b text-left text-[#6a003f] font-bold">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -60,6 +61,18 @@ $def with (usuarios)
                                     <td class="py-3 px-4 border-b">$usuario['nombre']</td>
                                     <td class="py-3 px-4 border-b">$usuario['num_telefono']</td>
                                     <td class="py-3 px-4 border-b">$usuario['rol_nombre']</td>
+                                    <td class="py-3 px-4 border-b flex gap-2">
+                                        <form action="/editar_usuario/$usuario['id_usuario']" method="get" style="display:inline;">
+                                            <button type="submit" class="inline-block px-4 py-2 bg-[#E1A6CD] text-[#6a003f] font-semibold rounded-lg shadow hover:bg-[#d48fc2] transition-colors duration-200">
+                                                <i class="fas fa-edit mr-2"></i>Editar
+                                            </button>
+                                        </form>
+                                        <form action="/borrar_usuario/$usuario['id_usuario']" method="post" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que deseas borrar este usuario?');">
+                                            <button type="submit" class="inline-block px-4 py-2 bg-[#E1A6CD] text-[#6a003f] font-semibold rounded-lg shadow hover:bg-[#d48fc2] transition-colors duration-200 border border-[#E1A6CD] hover:border-[#d48fc2] focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                                                <i class="fas fa-trash-alt mr-2"></i>Borrar
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                         </tbody>
                     </table>

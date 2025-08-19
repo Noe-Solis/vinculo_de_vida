@@ -20,6 +20,11 @@ urls = (
     '/logout', 'Logout',
     '/administrador', 'AdminArea',
     '/administrador_registrar_usuario', 'RegistroUsuario',
+    '/administrador_ver_usuarios', 'VisualizacionUsuarios',
+    '/borrar_cita/(.*)', 'EliminarCita',
+    '/borrar_usuario/(.*)', 'EliminarUsuario',
+    '/editar_usuario/(.*)' , 'EditarUsuario',
+    '/editar_cita/(.*)', 'EditarCita',
     '/enfermeras', 'EnfermerasArea',
     '/registro_citas', 'RegistroCitas',
     '/registro_lactantes', 'RegistroLactantes',
@@ -188,12 +193,13 @@ class RegistroUsuario:
         data = web.input(nombre=None, num_telefono=None, contrasena=None, id_rol=None)
         conn = get_db()
         roles = conn.execute("SELECT id_rol, nombre FROM Rol").fetchall()
-        if not all([data.nombre, data.num_telefono, data.contrasena, data.id_rol]):
+        nombres = data.nombre
+        if not all([nombres, data.num_telefono, data.contrasena, data.id_rol]):
             return render.administrador_registrar_usuario(roles=roles, message="Todos los campos son obligatorios.")
         try:
             password_hash = hashlib.sha256(data.contrasena.encode('utf-8')).hexdigest()
             conn.execute("INSERT INTO Usuarios (nombre, num_telefono, contraseña, id_rol) VALUES (?, ?, ?, ?)",
-                         (data.nombre, data.num_telefono, password_hash, data.id_rol))
+                         (nombres, data.num_telefono, password_hash, data.id_rol))
             conn.commit()
             log_auditoria("Registro de nuevo usuario", "Usuarios")
             raise web.seeother('/visualizacion_usuarios')
@@ -212,8 +218,10 @@ class RegistroLactantes:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
         areas = get_db().execute("SELECT id_area, nombre FROM Area").fetchall()
+        motivos = get_db().execute('select id_motivo, nombre FROM Motivo').fetchall()
+
         return_url = '/administrador' if web.ctx.session.get('rol_nombre') == 'Administrador' else '/enfermeras'
-        return render.registro_lactantes(return_url=return_url, error_message="", areas=areas)
+        return render.registro_lactantes(return_url=return_url, error_message="", areas=areas, motivos=motivos)
     
     @rol_requerido('Administrador', 'Enfermera')
     def POST(self):
@@ -222,6 +230,7 @@ class RegistroLactantes:
         try:
             # 1. Obtener datos del lactante
             paterno_lactante = data.get('apellido_paterno_lactante', '').strip()
+            materno_lactante = data.get('apellido_materno_lactante', '').strip()
             fecha_nac = data.get('fecha_nacimiento_lactante', '').strip()
             genero = data.get('genero_lactante', '').strip()
             area_nombre = data.get('area_lactante', '').strip()
@@ -239,18 +248,20 @@ class RegistroLactantes:
             # 4. Procesar datos de la madre (buscar o crear)
             nombre_madre = data.get('nombre_madre', '').strip()
             paterno_madre = data.get('apellido_paterno_madre', '').strip()
+            materno_madre = data.get('apellido_materno_madre', '').strip()
             
             id_madre = None
-            if nombre_madre and paterno_madre:
+            if nombre_madre and paterno_madre and materno_madre:
                 # Buscar si la madre ya existe
-                madre_existente = conn.execute("SELECT id_madre FROM Madres WHERE nombre = ? AND apellido_paterno = ?", (nombre_madre, paterno_madre)).fetchone()
+                madre_existente = conn.execute("SELECT id_madre FROM Madres WHERE nombre = ? AND apellido_paterno = ? AND apellido_materno = ?", (nombre_madre, paterno_madre, materno_madre)).fetchone()
                 if madre_existente:
                     id_madre = madre_existente['id_madre']
                 else:
                     # Crear nueva madre si no existe
-                    conn.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES (?, ?, ?, ?, 1)",
-                                 (nombre_madre, paterno_madre, data.get('apellido_materno_madre', ''), data.get('discapacidad_madre', '')))
-                    id_madre = conn.lastrowid
+                    cursor = conn.cursor()
+                    cursor.execute("INSERT INTO Madres (nombre, apellido_paterno, apellido_materno, discapacidad, id_motivo) VALUES (?, ?, ?, ?, 1)",
+                                   (nombre_madre, paterno_madre, data.get('apellido_materno_madre', ''), data.get('discapacidad_madre', '')))
+                    id_madre = cursor.lastrowid
                     log_auditoria("Registro de nueva madre", "Madres")
             else:
                 # Usar madre 'Desconocida' si no se proporciona información
@@ -261,7 +272,7 @@ class RegistroLactantes:
             conn.execute("""
                 INSERT INTO Lactantes (id_madres, id_area, apellido_paterno, apellido_materno, fecha_nacimiento, genero, estado, discapacidad, peso)  
                 VALUES (?, ?, ?, ?, ?, ?, 'Activo', ?, ?);
-            """, (id_madre, id_area, paterno_lactante, data.get('apellido_materno_lactante', ''), fecha_nac, genero, data.get('discapacidad_lactante', 'Ninguna'), data.get('peso_lactante')))
+            """, (id_madre, id_area, paterno_lactante, materno_lactante, fecha_nac, genero, data.get('discapacidad_lactante', 'Ninguna'), data.get('peso_lactante')))
             
             conn.commit()
             log_auditoria("Registro de nuevo lactante", "Lactantes")
@@ -271,54 +282,69 @@ class RegistroLactantes:
             conn.rollback()
             areas = conn.execute("SELECT id_area, nombre FROM Area").fetchall()
             return_url = '/administrador' if web.ctx.session.get('rol_nombre') == 'Administrador' else '/enfermeras'
-            return render.registro_lactantes(return_url=return_url, error_message=f"Error al registrar: {e}", areas=areas)
+            return render.registro_lactantes(return_url=return_url, error_message=f"Error al registrar: {e}", areas=areas, motivos=[])
 
 # --- FIX: Lógica mejorada para el registro de citas ---
 class RegistroCitas:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
         # En la página de citas, necesitamos los lactantes para que el usuario pueda seleccionarlos
-        lactantes = get_db().execute("SELECT id_lactantes, apellido_paterno, apellido_materno FROM Lactantes ORDER BY apellido_paterno").fetchall()
-        return render.registro_citas(message="", lactantes=lactantes)
+        madres = get_db().execute("SELECT id_madre, nombre, apellido_paterno, apellido_materno FROM Madres ORDER BY apellido_paterno").fetchall()
+        lactantes = ""
+        return render.registro_citas(message="", madres=madres, lactantes=lactantes, motivos="", encargado="")
     
     @rol_requerido('Administrador', 'Enfermera')
     def POST(self):
         data = web.input()
         conn = get_db()
 
-        try:
-            # Obtener datos del formulario
-            id_lactante = data.get('id_lactante')
-            hora_llegada = data.get('hora_llegada')
-            justificacion = data.get('justificacion')
-            subsecuente = 1 if data.get('subsecuente_checkbox') == 'on' else 0
-
-            # Validar campos obligatorios
-            if not all([id_lactante, hora_llegada, justificacion]):
-                raise ValueError("Los campos de lactante, hora de llegada y justificación son obligatorios.")
-
-            # Agendar la cita
+        if 'buscar' in data:
             atendido_por_id_usuario = web.ctx.session.get('user_id')
-            fecha_actual = datetime.date.today().isoformat()
-            
-            # Usamos un motivo por defecto ("Chequeo de rutina", ID 1)
-            id_motivo_defecto = 1
+            print(atendido_por_id_usuario)
+            id_madre = data.get('id_madre')
+            print(id_madre)
+            encargado = conn.execute("SELECT nombre FROM usuarios WHERE id_usuario = ?", (atendido_por_id_usuario,)).fetchone()
+            madre = conn.execute("SELECT id_madre, nombre, apellido_paterno, apellido_materno FROM Madres WHERE id_madre != ? ORDER BY apellido_paterno", (id_madre,)).fetchall()
+            lactantes = conn.execute("""SELECT id_lactantes, apellido_paterno, apellido_materno, fecha_nacimiento, genero
+            FROM Lactantes
+            WHERE id_madres = ?
+            ORDER BY apellido_paterno, apellido_materno;
+            """, (id_madre,)).fetchall()
+            motivos = conn.execute('select id_motivo, nombre FROM Motivo').fetchall()
+            return render.registro_citas(message="", madres=madre, lactantes=lactantes, motivos=motivos, encargado=encargado)
 
-            conn.execute("""
-                INSERT INTO Citas (id_lactantes, id_motivo, atendido_por_id_usuario, fecha_cita, subsecuente, justificacion, hora_de_entrada)  
-                VALUES (?, ?, ?, ?, ?, ?, ?);
-            """, (id_lactante, id_motivo_defecto, atendido_por_id_usuario, fecha_actual, subsecuente, justificacion, hora_llegada))
-            
+        # Registro de cita
+        id_lactante = data.get('id_lactante')
+        id_motivo = data.get('motivo')
+        fecha = data.get('fecha_cita')  # formato: 'YYYY-MM-DD'
+        hora = data.get('hora_cita')    # formato: 'HH:MM'
+        subsecuente = data.get('subsecuente', 0)
+        justificacion = data.get('justificacion', '')
+        atendido_por_id_usuario = web.ctx.session.get('user_id')
+
+        print("DEBUG:", id_lactante, id_motivo, fecha, hora)
+        if not (id_lactante and id_motivo and fecha and hora):
+            madres = conn.execute("SELECT id_madre, nombre, apellido_paterno, apellido_materno FROM Madres ORDER BY apellido_paterno").fetchall()
+            lactantes = conn.execute("SELECT id_lactantes, apellido_paterno, apellido_materno, fecha_nacimiento, genero FROM Lactantes ORDER BY apellido_paterno, apellido_materno").fetchall()
+            motivos = conn.execute('select id_motivo, nombre FROM Motivo').fetchall()
+            encargado = conn.execute("SELECT nombre FROM usuarios WHERE id_usuario = ?", (atendido_por_id_usuario,)).fetchone()
+            return render.registro_citas(message="Todos los campos obligatorios deben ser completados.", madres=madres, lactantes=lactantes, motivos=motivos, encargado=encargado)
+
+        # Guardar la cita
+        try:
+            conn.execute(
+                "INSERT INTO Citas (id_lactantes, id_motivo, atendido_por_id_usuario, fecha_cita, subsecuente, justificacion, hora_de_entrada) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (id_lactante, id_motivo, atendido_por_id_usuario, fecha, subsecuente, justificacion, hora)
+            )
             conn.commit()
-            log_auditoria(f"Registro de nueva cita para lactante ID {id_lactante}", "Citas")
-            
+            log_auditoria("Registro de nueva cita", "Citas")
             raise web.seeother('/visualizacion_citas')
-
-        except (ValueError, sqlite3.Error) as e:
-            conn.rollback()
-            print(f"Error al registrar cita: {e}")
-            lactantes = conn.execute("SELECT id_lactantes, apellido_paterno, apellido_materno FROM Lactantes ORDER BY apellido_paterno").fetchall()
-            return render.registro_citas(message=f"Error al registrar la cita: {e}", lactantes=lactantes)
+        except sqlite3.Error as e:
+            madres = conn.execute("SELECT id_madre, nombre, apellido_paterno, apellido_materno FROM Madres ORDER BY apellido_paterno").fetchall()
+            lactantes = conn.execute("SELECT id_lactantes, apellido_paterno, apellido_materno, fecha_nacimiento, genero FROM Lactantes ORDER BY apellido_paterno, apellido_materno").fetchall()
+            motivos = conn.execute('select id_motivo, nombre FROM Motivo').fetchall()
+            encargado = conn.execute("SELECT nombre FROM usuarios WHERE id_usuario = ?", (web.ctx.session.get('user_id'),)).fetchone()
+            return render.registro_citas(message=f"Error al registrar la cita: {e}", madres=madres, lactantes=lactantes, motivos=motivos, encargado=encargado)
 
 # --- Clases de visualización (Sin cambios relevantes) ---
 class VisualizacionLactantes:
@@ -327,12 +353,23 @@ class VisualizacionLactantes:
         conn = get_db()
         areas = conn.execute("SELECT id_area, nombre FROM Area").fetchall()
         lactantes = conn.execute("""
-            SELECT l.*, m.nombre AS nombre_madre, a.nombre AS area_nombre
-            FROM Lactantes l
-            LEFT JOIN Madres m ON l.id_madres = m.id_madre
-            LEFT JOIN Area a ON l.id_area = a.id_area
-            ORDER BY l.apellido_paterno;
-        """).fetchall()
+                SELECT
+                    l.id_lactantes,
+                    l.apellido_paterno,
+                    l.apellido_materno,
+                    l.fecha_nacimiento,
+                    l.genero,
+                    l.discapacidad,
+                    l.peso,
+                    l.estado,
+                    (m.nombre || ' ' || m.apellido_paterno || ' ' || IFNULL(m.apellido_materno, '')) AS nombre_completo_madre,
+                    a.nombre AS area_nombre
+                FROM Lactantes l
+                LEFT JOIN Madres m ON l.id_madres = m.id_madre
+                LEFT JOIN Area a ON l.id_area = a.id_area
+                ORDER BY l.apellido_paterno, l.apellido_materno;
+            """).fetchall()
+        print(lactantes)
         return render.visualizacion_lactantes(lactantes=lactantes, areas=areas)
 
     @rol_requerido('Administrador', 'Enfermera')
@@ -384,6 +421,39 @@ class VisualizacionCitas:
         """).fetchall()
         return render.visualizacion_citas(citas=citas)
 
+class EditarCita:
+    def GET(self, id_citas):
+        conn = get_db()
+        info_actual = conn.execute("""
+            SELECT 
+                c.id_citas,
+                c.id_lactantes,
+                l.apellido_paterno,
+                l.apellido_materno,
+                c.id_motivo,
+                m.nombre AS motivo_nombre,
+                c.fecha_cita,
+                c.subsecuente,
+                c.justificacion,
+                c.hora_de_entrada
+            FROM Citas c
+            JOIN Lactantes l ON c.id_lactantes = l.id_lactantes
+            LEFT JOIN Motivo m ON c.id_motivo = m.id_motivo
+            WHERE c.id_citas = ?
+        """, (id_citas,)).fetchone()
+        
+        motivos = conn.execute('select id_motivo, nombre FROM Motivo').fetchall()
+        return render.editar_cita(message="", info_actual=info_actual, motivos=motivos)
+    
+class EliminarCita:
+    def GET(self, id_cita):
+        pass
+    def POST(self, id_cita):
+        conn = get_db()
+        conn.execute("DELETE FROM citas WHERE id_citas = ?", (id_cita,))
+        conn.commit()
+        return web.seeother('/visualizacion_citas')
+
 class VisualizacionUsuarios:
     @rol_requerido('Administrador')
     def GET(self):
@@ -392,6 +462,56 @@ class VisualizacionUsuarios:
             FROM Usuarios u JOIN Rol r ON u.id_rol = r.id_rol ORDER BY r.nombre;
         """).fetchall()
         return render.visualizacion_usuarios(usuarios=usuarios)
+
+class EditarUsuario:
+    def GET(self, id_usuario):
+        conn = get_db().cursor()
+        info_actual = conn.execute(
+            """SELECT usuarios.nombre AS nombre, num_telefono, usuarios.id_rol, rol.nombre AS rol_nombre
+            FROM usuarios
+            INNER JOIN rol ON usuarios.id_rol = rol.id_rol
+            WHERE id_usuario = ?""", (id_usuario,)
+        ).fetchone()
+        roles = conn.execute("SELECT id_rol, nombre FROM rol").fetchall()
+
+
+        return render.editar_usuario(info_actual, roles, message="")
+    
+    def POST(self, id_usuario):
+        data = web.input()
+        conn = get_db()
+
+        roles = conn.execute("SELECT id_rol, nombre FROM rol").fetchall()
+        info_actual = conn.execute(
+            """SELECT usuarios.nombre AS nombre, contraseña, num_telefono, usuarios.id_rol, rol.nombre AS rol_nombre
+            FROM usuarios
+            INNER JOIN rol ON usuarios.id_rol = rol.id_rol
+            WHERE id_usuario = ?""", (id_usuario,)
+        ).fetchone()
+        (nombre_actual, contrasena_actual, num_telefono_actual, id_rol_actual, nombre_rol_actual) = info_actual
+
+        password_hash = hashlib.sha256(data.contrasena.encode('utf-8')).hexdigest()
+
+        conn.execute("UPDATE usuarios SET nombre = ?, contraseña = ?, num_telefono = ?, id_rol = ? WHERE id_usuario = ?",
+        (data.get('nombre', '').strip() or nombre_actual, password_hash or contrasena_actual,
+        data.get('num_telefono', '').strip() or num_telefono_actual, data.get('id_rol', '').strip() or id_rol_actual, id_usuario))
+
+        conn.commit()
+        return web.seeother('/visualizacion_usuarios')
+
+class EliminarUsuario:
+    def GET(self, id_usuario):
+        pass
+    def POST(self, id_usuario):
+        conn = get_db()
+        conn.execute("DELETE FROM Usuarios WHERE id_usuario = ?", (id_usuario,))
+        conn.execute("DELETE FROM Citas WHERE atendido_por_id_usuario = ?", (id_usuario,))
+        conn.commit()
+
+        return web.seeother('/visualizacion_usuarios')
+        
+        
+        
 
 # --- Clases de Reportes y API ---
 class ReportesArea:
@@ -403,7 +523,7 @@ class ReportesGenerales:
     def GET(self):
         conn = get_db()
         reports = conn.execute("SELECT tipo, fecha_generado FROM Reportes ORDER BY fecha_generado DESC").fetchall()
-        return render.reportes_generales(reports=reports)
+        return render.reportes_generales()
 
 class ReportesPorLactante:
     @rol_requerido('Administrador', 'Enfermera')

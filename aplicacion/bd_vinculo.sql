@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS Lactantes (
     fecha_nacimiento DATE, 
     genero TEXT,
     estado TEXT,
+    peso DECIMAL,
     discapacidad TEXT, 
     FOREIGN KEY (id_madres) REFERENCES Madres(id_madre),
     FOREIGN KEY (id_area) REFERENCES Area(id_area)
@@ -106,3 +107,6 @@ FOREIGN KEY (id_lactantes) REFERENCES Lactantes(id_lactantes)
 -- Inserta roles iniciales si no existen
 INSERT OR IGNORE INTO Rol (nombre, permiso) VALUES ('Administrador', 'all');
 INSERT OR IGNORE INTO Rol (nombre, permiso) VALUES ('Enfermera', 'read_write_patients');
+
+SELECT c.id_citas, c.id_lactantes, l.apellido_paterno AS lactante_apellido, c.fecha_cita, c.hora_de_entrada, c.id_motivo, c.subsecuente, c.justificacion, c.atendido_por_id_usuario, u.nombre AS nombre_encargado FROM Citas c JOIN Lactantes l ON c.id_lactantes = l.id_lactantes LEFT JOIN Usuarios u ON c.atendido_por
+_id_usuario = u.id_usuario WHERE c.id_citas = 1;
