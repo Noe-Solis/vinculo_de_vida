@@ -44,13 +44,13 @@ $def with (message, info_actual, motivos)
                         <span>$message</span>
                     </div>
 
-                <form action="/editar_cita/" method="POST" class="space-y-8">
+                <form action="/editar_cita/$info_actual[0]" method="POST" class="space-y-8">
                     <div class="w-full max-w-3xl mx-auto mt-8">
                         <label for="lactante" class="block text-xl font-bold text-[#6a003f] mb-2">Datos del lactante</label>
                         <input id="lactante" name="lactante" type="text" placeholder="Lactante" value="$info_actual[2] $info_actual[3]"  readonly class="md:col-span-2 w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
                     <div class="w-full max-w-3xl mx-auto mb-8">
                             <label for="madre_select" class="block text-xl font-bold text-[#6a003f] mb-2">Motivo</label>
-                            <select id="motiva_select" name="motivo" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                            <select id="motiva_select" name="motivo" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
                                 <option value="" disabled selected>Selecciona un motivo</option>
                                 $for motivo in motivos:
                                     <option value="$motivo[0]" class="">$motivo[1]</option>
@@ -59,23 +59,27 @@ $def with (message, info_actual, motivos)
                         <div class="w-full max-w-3xl mx-auto mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label for="fecha_cita" class="block text-left font-bold mb-1 text-[#6a003f]">Fecha de la Cita (*)</label>
-                                <input type="date" id="fecha_cita" name="fecha_cita" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                                <input type="date" id="fecha_cita" name="fecha_cita" value="$info_actual[6]" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
                             </div>
                             <div>
                                 <label for="hora_cita" class="block text-left font-bold mb-1 text-[#6a003f]">Hora de la Cita (*)</label>
-                                <input type="time" id="hora_cita" name="hora_cita" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
+                                <input type="time" id="hora_cita" name="hora_cita" value="$info_actual[9]" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
                             </div>
                         </div>
                         <div class="w-full max-w-3xl mx-auto mb-8">
                             <label for="subsecuente" class="block text-xl font-bold text-[#6a003f] mb-2">¿Es subsecuente?</label>
                             <select id="subsecuente" name="subsecuente" required class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">
-                                <option value="0" selected>No</option>
-                                <option value="1">Sí</option>
+                                $if info_actual[7] == 1:
+                                    <option value="" disabled>No</option>
+                                    <option value="1">Sí</option>
+                                $elif info_actual[7] == 0:
+                                    <option value="" disabled>Si</option>
+                                    <option value="0">No</option>
                             </select>
                         </div>
                         <div class="w-full max-w-3xl mx-auto mb-8">
                             <label for="justificacion" class="block text-xl font-bold text-[#6a003f] mb-2">Justificación</label>
-                            <textarea id="justificacion" name="justificacion" rows="3" placeholder="Describe la justificación de la cita (opcional)" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]"></textarea>
+                            <textarea id="justificacion" name="justificacion" rows="3" placeholder="Describe la justificación de la cita (opcional)" class="w-full p-3 border border-[#E4B4C5] rounded-md bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1A6CD]">$info_actual[8]</textarea>
                         </div>
                         <div class="text-center mt-6">
                             <button type="submit" class="w-full sm:w-2/3 py-3 mt-6 bg-[#F8C9D9] text-[#6A003F] font-bold rounded-full shadow-md hover:bg-[#E4B4C5] transform hover:scale-105">

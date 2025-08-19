@@ -10,7 +10,7 @@
 </head>
 <body class="bg-[#FDF4F7] text-gray-800 min-h-screen flex flex-col items-center">
 
-    <div class="min-h-screen p-4 sm:p-6 lg:p-8 w-full">
+    <div class="min-h-screen p-4 sm:p-6 lg:p-8 w-full flex flex-col items-center justify-center">
         <!-- Encabezado -->
         <header class="bg-[#E1A6CD] shadow-md rounded-lg p-3 mb-8 w-full">
             <div class="container mx-auto flex justify-between items-center">
@@ -23,8 +23,8 @@
         </header>
 
         <!-- Contenido principal -->
-        <main class="flex-grow w-full">
-            <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg max-w-4xl w-full mx-auto">
+        <main class="flex-grow w-full flex items-center justify-center">
+            <div class="bg-white rounded-2xl p-8 sm:p-12 shadow-lg max-w-4xl w-full flex items-center justify-center">
                 <div class="relative">
                     <a href="javascript:history.back()" class="absolute left-0 top-1/2 -translate-y-1/2 text-2xl text-[#6a003f]" title="Regresar">
                         <i class="fas fa-arrow-left"></i>
@@ -34,15 +34,13 @@
                     </h2>
                 </div>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                    <a href="/reportes_generales" class="block p-6 bg-[#F8C9D9] rounded-lg text-center text-[#6A003F] font-bold shadow-md hover:bg-[#E4B4C5] transform hover:scale-105 transition-all duration-300">
+                <div class="flex justify-center items-center w-full">
+                    <form method="post" action="/reportes_generales" class="block p-6 bg-[#F8C9D9] rounded-lg text-center text-[#6A003F] font-bold shadow-md hover:bg-[#E4B4C5] transform hover:scale-105 transition-all duration-300 w-full max-w-xs">
                         <i class="fas fa-file-alt fa-2x mb-3"></i>
-                        <p>Reportes Generales</p>
-                    </a>
-                    <a href="/reportes_por_lactante" class="block p-6 bg-[#F8C9D9] rounded-lg text-center text-[#6A003F] font-bold shadow-md hover:bg-[#E4B4C5] transform hover:scale-105 transition-all duration-300">
-                        <i class="fas fa-baby fa-2x mb-3"></i>
-                        <p>Reportes por Lactante</p>
-                    </a>
+                        <p class="mb-4">Reportes Generales</p>
+                        <button type="submit" name="formato" value="pdf" class="mb-2 w-full bg-[#6A003F] text-white py-2 px-4 rounded hover:bg-[#4a0030] transition">Descargar PDF</button>
+                        <button type="submit" name="formato" value="excel" class="w-full bg-[#6A003F] text-white py-2 px-4 rounded hover:bg-[#4a0030] transition">Descargar Excel</button>
+                    </form>
                 </div>
             </div>
         </main>

@@ -2,12 +2,18 @@
 # Este archivo contiene la lógica del servidor para la aplicación.
 # Confirma que tienes instalado web.py: pip install web.py
 
+
 import web
 import os
 import json
 import sqlite3
 import hashlib
 import datetime
+# Agregar imports para generación de reportes
+import io
+from openpyxl import Workbook
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 web.config.debug = True  # FIX: Habilitado para depuración
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -442,8 +448,90 @@ class EditarCita:
             WHERE c.id_citas = ?
         """, (id_citas,)).fetchone()
         
-        motivos = conn.execute('select id_motivo, nombre FROM Motivo').fetchall()
+        motivos = conn.execute('select id_motivo, nombre FROM Motivo WHERE id_motivo != ?', (info_actual[4],)).fetchall()
         return render.editar_cita(message="", info_actual=info_actual, motivos=motivos)
+
+
+# --- Reporte General: PDF y Excel ---
+class ReportesGenerales:
+    @rol_requerido('Administrador', 'Enfermera')
+    def GET(self):
+        return "Acción no permitida. Usa el botón de reporte para descargar el archivo."
+
+    @rol_requerido('Administrador', 'Enfermera')
+    def POST(self):
+        data = web.input(formato=None)
+        conn = get_db()
+        total_lactantes = conn.execute("SELECT COUNT(*) FROM Lactantes;").fetchone()[0]
+        total_citas = conn.execute("SELECT COUNT(*) FROM Citas;").fetchone()[0]
+
+        if data.formato == 'excel':
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Reporte General"
+            ws.append(["Reporte General"])
+            ws.append([""])
+            ws.append(["Total de lactantes", total_lactantes])
+            ws.append(["Total de citas", total_citas])
+            output = io.BytesIO()
+            wb.save(output)
+            output.seek(0)
+            web.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            web.header('Content-Disposition', 'attachment; filename="reporte_general.xlsx"')
+            return output.read()
+        elif data.formato == 'pdf':
+            output = io.BytesIO()
+            c = canvas.Canvas(output, pagesize=letter)
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(100, 750, "Reporte General")
+            c.setFont("Helvetica", 12)
+            c.drawString(100, 700, f"Total de lactantes: {total_lactantes}")
+            c.drawString(100, 680, f"Total de citas: {total_citas}")
+            c.save()
+            output.seek(0)
+            web.header('Content-Type', 'application/pdf')
+            web.header('Content-Disposition', 'attachment; filename="reporte_general.pdf"')
+            return output.read()
+        else:
+            raise web.notfound("Formato no soportado")
+            # Generar reporte según formato
+            if data.formato == 'excel':
+                # Generar Excel en memoria
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "Reporte General"
+                ws.append(["Reporte General"])
+                ws.append([""])
+                ws.append(["Total de lactantes", total_lactantes])
+                ws.append(["Total de citas", total_citas])
+                output = io.BytesIO()
+                wb.save(output)
+                output.seek(0)
+                web.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                web.header('Content-Disposition', 'attachment; filename="reporte_general.xlsx"')
+                return output.read()
+            elif data.formato == 'pdf':
+                # Generar PDF en memoria
+                output = io.BytesIO()
+                c = canvas.Canvas(output, pagesize=letter)
+                c.setFont("Helvetica-Bold", 16)
+                c.drawString(100, 750, "Reporte General")
+                c.setFont("Helvetica", 12)
+                c.drawString(100, 700, f"Total de lactantes: {total_lactantes}")
+                c.drawString(100, 680, f"Total de citas: {total_citas}")
+                c.save()
+                output.seek(0)
+                web.header('Content-Type', 'application/pdf')
+                web.header('Content-Disposition', 'attachment; filename="reporte_general.pdf"')
+                return output.read()
+            else:
+                raise web.notfound("Formato no soportado")
+        (id_motivo_actual, fecha_cita_actual, hora_entrada_actual, subsecuente_actual, justificacion_actual) = info_actual
+        conn.execute("UPDATE citas SET id_motivo = ?, fecha_cita = ?, hora_de_entrada = ?, subsecuente = ?, justificacion = ? WHERE id_citas = ?", 
+        (data.get('motivo', '') or id_motivo_actual, data.get('fecha_cita', '') or fecha_cita_actual, data.get('hora_cita', '') or hora_entrada_actual, data.get('subsecuente', 0) or subsecuente_actual, data.get('justificacion', '').strip() or justificacion_actual, id_citas))
+        conn.commit()
+
+        return web.seeother('/visualizacion_citas')
     
 class EliminarCita:
     def GET(self, id_cita):
@@ -477,6 +565,7 @@ class EditarUsuario:
 
         return render.editar_usuario(info_actual, roles, message="")
     
+
     def POST(self, id_usuario):
         data = web.input()
         conn = get_db()
@@ -518,12 +607,8 @@ class ReportesArea:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self):
         return render.reportes()
-class ReportesGenerales:
-    @rol_requerido('Administrador', 'Enfermera')
-    def GET(self):
-        conn = get_db()
-        reports = conn.execute("SELECT tipo, fecha_generado FROM Reportes ORDER BY fecha_generado DESC").fetchall()
-        return render.reportes_generales()
+
+    # (Definición funcional de la clase ya está arriba, este bloque se elimina)
 
 class ReportesPorLactante:
     @rol_requerido('Administrador', 'Enfermera')
