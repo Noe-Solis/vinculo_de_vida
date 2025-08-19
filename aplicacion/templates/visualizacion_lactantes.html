@@ -61,9 +61,11 @@ $def with (lactantes, areas)
                                             <a href="/editar_lactante/$lactante[0]" class="bg-[#E1A6CD] hover:bg-[#d18ab7] text-[#6A003F] font-bold py-1 px-3 rounded transition flex items-center gap-1" title="Editar">
                                                 <i class="fas fa-edit"></i> Editar
                                             </a>
-                                            <a href="/eliminar_lactante/$lactante[0]" class="bg-[#F87171] hover:bg-[#dc2626] text-white font-bold py-1 px-3 rounded transition flex items-center gap-1" title="Eliminar" onclick="return confirm('¿Seguro que deseas eliminar este lactante?');">
-                                                <i class="fas fa-trash-alt"></i> Eliminar
-                                            </a>
+                                            <form method="post" action="/eliminar_lactante/$lactante[0]" style="display:inline;" onsubmit="return confirm('¿Seguro que deseas eliminar este lactante?');">
+                                                <button type="submit" class="bg-[#E1A6CD] hover:bg-[#d18ab7] text-[#6A003F] font-bold py-1 px-3 rounded transition flex items-center gap-1" title="Eliminar">
+                                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                             

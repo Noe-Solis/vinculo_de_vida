@@ -44,7 +44,7 @@ urls = (
     '/visualizacion_usuarios', 'VisualizacionUsuarios',
     '/api/generate_report', 'ReportesAPI',
     '/static/(.*)', 'Static',
-    r'/eliminar_lactante/(\d+)', 'EliminarLactante'
+    '/eliminar_lactante/(.*)', 'EliminarLactante'
 )
 
 # --- Manejador de Archivos Estáticos ---
@@ -410,48 +410,66 @@ class EditarLactante:
         # Obtener datos del lactante y su madre
         sql = '''
             SELECT l.id_lactantes, l.apellido_paterno, l.apellido_materno, l.fecha_nacimiento, l.genero, l.estado, l.discapacidad, l.peso, l.id_area,
-                   m.id_madre, m.nombre AS nombre_madre, m.apellido_paterno AS apellido_paterno_madre, m.apellido_materno AS apellido_materno_madre, m.discapacidad AS discapacidad_madre
+                   m.id_madre, m.nombre AS nombre_madre, m.apellido_paterno AS apellido_paterno_madre, m.apellido_materno AS apellido_materno_madre, m.discapacidad AS discapacidad_madre,
+                   a.nombre AS nombre_area
             FROM Lactantes l
             LEFT JOIN Madres m ON l.id_madres = m.id_madre
+            LEFT JOIN Area a ON l.id_area = a.id_area
             WHERE l.id_lactantes = ?
         '''
         lactante = conn.execute(sql, (id_lactante,)).fetchone()
         if not lactante:
             return "Lactante no encontrado."
         # Obtener áreas para el select
-        areas = conn.execute("SELECT id_area, nombre FROM Area").fetchall()
+        areas = conn.execute("SELECT id_area, nombre FROM Area WHERE id_area != ?", (lactante[8],)).fetchall()
         return render.editar_lactante(lactante=lactante, areas=areas)
 
     @rol_requerido('Administrador', 'Enfermera')
     def POST(self, id_lactante):
         data = web.input()
         conn = get_db()
-        # Actualizar datos del lactante
+        # Obtener los valores actuales del lactante y madre
+        sql = '''
+            SELECT l.id_lactantes, l.apellido_paterno, l.apellido_materno, l.fecha_nacimiento, l.genero, l.estado, l.discapacidad, l.peso, l.id_area,
+                   m.id_madre, m.nombre AS nombre_madre, m.apellido_paterno AS apellido_paterno_madre, m.apellido_materno AS apellido_materno_madre, m.discapacidad AS discapacidad_madre,
+                   a.nombre AS nombre_area
+            FROM Lactantes l
+            LEFT JOIN Madres m ON l.id_madres = m.id_madre
+            LEFT JOIN Area a ON l.id_area = a.id_area
+            WHERE l.id_lactantes = ?
+        '''
+        info_actual = conn.execute(sql, (id_lactante,)).fetchone()
+        (
+            _id_lactantes, apellido_paterno_actual, apellido_materno_actual, fecha_nacimiento_actual, genero_actual, estado_actual, discapacidad_actual, peso_actual, id_area_actual,
+            id_madre_actual, nombre_madre_actual, apellido_paterno_madre_actual, apellido_materno_madre_actual, discapacidad_madre_actual, nombre_area_actual
+        ) = info_actual
+
+        # Actualizar datos del lactante usando los valores actuales como respaldo
         conn.execute('''
             UPDATE Lactantes SET apellido_paterno=?, apellido_materno=?, fecha_nacimiento=?, genero=?, estado=?, discapacidad=?, peso=?, id_area=?
             WHERE id_lactantes=?
         ''', (
-            data.get('apellido_paterno', '').strip(),
-            data.get('apellido_materno', '').strip(),
-            data.get('fecha_nacimiento', '').strip(),
-            data.get('genero', '').strip(),
-            data.get('estado', '').strip(),
-            data.get('discapacidad', '').strip(),
-            data.get('peso', '').strip(),
-            data.get('id_area', '').strip(),
+            data.get('apellido_paterno', '').strip() or apellido_paterno_actual,
+            data.get('apellido_materno', '').strip() or apellido_materno_actual,
+            data.get('fecha_nacimiento', '').strip() or fecha_nacimiento_actual,
+            data.get('genero', '').strip() or genero_actual,
+            data.get('estado', '').strip() or estado_actual,
+            data.get('discapacidad', '').strip() or discapacidad_actual,
+            data.get('peso', '').strip() or peso_actual,
+            data.get('id_area', '').strip() or id_area_actual,
             id_lactante
         ))
         # Actualizar datos de la madre si existe
-        id_madre = data.get('id_madre', None)
+        id_madre = data.get('id_madre', None) or id_madre_actual
         if id_madre:
             conn.execute('''
                 UPDATE Madres SET nombre=?, apellido_paterno=?, apellido_materno=?, discapacidad=?
                 WHERE id_madre=?
             ''', (
-                data.get('nombre_madre', '').strip(),
-                data.get('apellido_paterno_madre', '').strip(),
-                data.get('apellido_materno_madre', '').strip(),
-                data.get('discapacidad_madre', '').strip(),
+                data.get('nombre_madre', '').strip() or nombre_madre_actual,
+                data.get('apellido_paterno_madre', '').strip() or apellido_paterno_madre_actual,
+                data.get('apellido_materno_madre', '').strip() or apellido_materno_madre_actual,
+                data.get('discapacidad_madre', '').strip() or discapacidad_madre_actual,
                 id_madre
             ))
         conn.commit()
@@ -460,8 +478,24 @@ class EditarLactante:
 class EliminarLactante:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self, id_lactante):
+        # Permitir eliminación por GET para compatibilidad, aunque lo ideal es POST
         conn = get_db()
         try:
+            conn.execute("DELETE FROM Citas WHERE id_lactantes = ?", (id_lactante,))
+            conn.execute("DELETE FROM Lactantes WHERE id_lactantes = ?", (id_lactante,))
+            conn.commit()
+            log_auditoria(f"Eliminación lactante ID {id_lactante}", "Lactantes")
+        except sqlite3.Error as e:
+            conn.rollback()
+            print(f"Error al eliminar lactante: {e}")
+        raise web.seeother('/visualizacion_lactantes')
+
+    @rol_requerido('Administrador', 'Enfermera')
+    def POST(self, id_lactante):
+        # Eliminar por POST (preferido)
+        conn = get_db()
+        try:
+            conn.execute("DELETE FROM Citas WHERE id_lactantes = ?", (id_lactante,))
             conn.execute("DELETE FROM Lactantes WHERE id_lactantes = ?", (id_lactante,))
             conn.commit()
             log_auditoria(f"Eliminación lactante ID {id_lactante}", "Lactantes")
