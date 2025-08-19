@@ -1,0 +1,96 @@
+$def with (lactante, areas)
+<!-- Plantilla de ejemplo para editar lactante, sin variables -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Lactante</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style> body { font-family: ui-sans-serif, system-ui, sans-serif; } </style>
+</head>
+<body class="bg-[#FDF4F7] text-gray-800 min-h-screen flex flex-col items-center">
+    <div class="min-h-screen p-4 sm:p-6 lg:p-8 w-full">
+        <header class="bg-[#E1A6CD] shadow-md rounded-lg p-3 mb-8 w-full">
+            <div class="container mx-auto flex justify-between items-center">
+                <div class="text-[#4A4A4A] text-lg font-bold p-2">EDITAR LACTANTE</div>
+                <a href="/logout" class="flex items-center text-[#6a003f] font-bold px-4 py-2 rounded-full space-x-2 bg-white border border-[#E1A6CD] hover:bg-gray-100" title="Cerrar Sesión">
+                    <div class="w-8 h-8 rounded-full border-2 border-[#6a003f] bg-white flex items-center justify-center"><i class="fas fa-sign-out-alt"></i></div>
+                    <span class="hidden sm:block">Cerrar Sesión</span>
+                </a>
+            </div>
+        </header>
+        <main class="flex-grow w-full max-w-2xl mx-auto">
+            <form method="post" class="bg-white rounded-2xl p-8 shadow-lg">
+                <h2 class="text-2xl font-bold text-[#6a003f] mb-6 text-center">Editar datos del lactante</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Apellido paterno</label>
+                        <input type="text" name="apellido_paterno" value="" placeholder="Ej: Pérez" class="w-full border rounded px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Apellido materno</label>
+                        <input type="text" name="apellido_materno" value="" placeholder="Ej: Gómez" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Fecha de nacimiento</label>
+                        <input type="date" name="fecha_nacimiento" value="" class="w-full border rounded px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Género</label>
+                        <select name="genero" class="w-full border rounded px-3 py-2" required>
+                            <option value="">Selecciona género</option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Femenino">Femenino</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Estado</label>
+                        <input type="text" name="estado" value="" placeholder="Ej: Activo" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Discapacidad</label>
+                        <input type="text" name="discapacidad" value="" placeholder="Ej: Ninguna" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Peso</label>
+                        <input type="number" step="0.01" name="peso" value="" placeholder="Ej: 8.5" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Área</label>
+                        <select name="id_area" class="w-full border rounded px-3 py-2" required>
+                            <option value="">Selecciona área</option>
+                            <option value="1">Pediatría</option>
+                            <option value="2">Neonatología</option>
+                        </select>
+                    </div>
+                </div>
+                <h3 class="text-xl font-bold text-[#6a003f] mb-4 mt-8 text-center">Datos de la madre</h3>
+                <!-- <input type="hidden" name="id_madre" value=""> -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Nombre</label>
+                        <input type="text" name="nombre_madre" value="" placeholder="Ej: María" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Apellido paterno</label>
+                        <input type="text" name="apellido_paterno_madre" value="" placeholder="Ej: López" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Apellido materno</label>
+                        <input type="text" name="apellido_materno_madre" value="" placeholder="Ej: Ramírez" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-[#6a003f] font-semibold mb-1">Discapacidad</label>
+                        <input type="text" name="discapacidad_madre" value="" placeholder="Ej: Ninguna" class="w-full border rounded px-3 py-2">
+                    </div>
+                </div>
+                <div class="flex justify-center mt-8">
+                    <button type="submit" class="bg-[#6A003F] text-white font-bold py-2 px-8 rounded hover:bg-[#4a0030] transition">Guardar Cambios</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</body>
+</html>

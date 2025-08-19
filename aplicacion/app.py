@@ -1,3 +1,4 @@
+
 # app.py
 # Este archivo contiene la lógica del servidor para la aplicación.
 # Confirma que tienes instalado web.py: pip install web.py
@@ -31,6 +32,7 @@ urls = (
     '/borrar_usuario/(.*)', 'EliminarUsuario',
     '/editar_usuario/(.*)' , 'EditarUsuario',
     '/editar_cita/(.*)', 'EditarCita',
+    '/editar_lactante/(.*)', 'EditarLactante',
     '/enfermeras', 'EnfermerasArea',
     '/registro_citas', 'RegistroCitas',
     '/registro_lactantes', 'RegistroLactantes',
@@ -399,7 +401,62 @@ class VisualizacionLactantes:
             conn.rollback()
             print(f"Error al actualizar lactante: {e}")
         raise web.seeother('/visualizacion_lactantes')
+    
+# --- Edición de Lactante y Madre ---
+class EditarLactante:
+    @rol_requerido('Administrador', 'Enfermera')
+    def GET(self, id_lactante):
+        conn = get_db()
+        # Obtener datos del lactante y su madre
+        sql = '''
+            SELECT l.id_lactantes, l.apellido_paterno, l.apellido_materno, l.fecha_nacimiento, l.genero, l.estado, l.discapacidad, l.peso, l.id_area,
+                   m.id_madre, m.nombre AS nombre_madre, m.apellido_paterno AS apellido_paterno_madre, m.apellido_materno AS apellido_materno_madre, m.discapacidad AS discapacidad_madre
+            FROM Lactantes l
+            LEFT JOIN Madres m ON l.id_madres = m.id_madre
+            WHERE l.id_lactantes = ?
+        '''
+        lactante = conn.execute(sql, (id_lactante,)).fetchone()
+        if not lactante:
+            return "Lactante no encontrado."
+        # Obtener áreas para el select
+        areas = conn.execute("SELECT id_area, nombre FROM Area").fetchall()
+        return render.editar_lactante(lactante=lactante, areas=areas)
 
+    @rol_requerido('Administrador', 'Enfermera')
+    def POST(self, id_lactante):
+        data = web.input()
+        conn = get_db()
+        # Actualizar datos del lactante
+        conn.execute('''
+            UPDATE Lactantes SET apellido_paterno=?, apellido_materno=?, fecha_nacimiento=?, genero=?, estado=?, discapacidad=?, peso=?, id_area=?
+            WHERE id_lactantes=?
+        ''', (
+            data.get('apellido_paterno', '').strip(),
+            data.get('apellido_materno', '').strip(),
+            data.get('fecha_nacimiento', '').strip(),
+            data.get('genero', '').strip(),
+            data.get('estado', '').strip(),
+            data.get('discapacidad', '').strip(),
+            data.get('peso', '').strip(),
+            data.get('id_area', '').strip(),
+            id_lactante
+        ))
+        # Actualizar datos de la madre si existe
+        id_madre = data.get('id_madre', None)
+        if id_madre:
+            conn.execute('''
+                UPDATE Madres SET nombre=?, apellido_paterno=?, apellido_materno=?, discapacidad=?
+                WHERE id_madre=?
+            ''', (
+                data.get('nombre_madre', '').strip(),
+                data.get('apellido_paterno_madre', '').strip(),
+                data.get('apellido_materno_madre', '').strip(),
+                data.get('discapacidad_madre', '').strip(),
+                id_madre
+            ))
+        conn.commit()
+        raise web.seeother('/visualizacion_lactantes')
+    
 class EliminarLactante:
     @rol_requerido('Administrador', 'Enfermera')
     def GET(self, id_lactante):
@@ -428,6 +485,28 @@ class VisualizacionCitas:
         return render.visualizacion_citas(citas=citas)
 
 class EditarCita:
+    def POST(self, id_citas):
+        data = web.input()
+        conn = get_db()
+        # Obtener los valores actuales de la cita
+        info_actual = conn.execute("SELECT id_motivo, fecha_cita, hora_de_entrada, subsecuente, justificacion FROM Citas WHERE id_citas = ?", (id_citas,)).fetchone()
+        if not info_actual:
+            return "Cita no encontrada."
+        (id_motivo_actual, fecha_cita_actual, hora_entrada_actual, subsecuente_actual, justificacion_actual) = info_actual
+        # Actualizar con los datos recibidos o mantener los actuales si no se envían
+        conn.execute(
+            "UPDATE Citas SET id_motivo = ?, fecha_cita = ?, hora_de_entrada = ?, subsecuente = ?, justificacion = ? WHERE id_citas = ?",
+            (
+                data.get('motivo', '') or id_motivo_actual,
+                data.get('fecha_cita', '') or fecha_cita_actual,
+                data.get('hora_cita', '') or hora_entrada_actual,
+                data.get('subsecuente', 0) or subsecuente_actual,
+                data.get('justificacion', '').strip() or justificacion_actual,
+                id_citas
+            )
+        )
+        conn.commit()
+        raise web.seeother('/visualizacion_citas')
     def GET(self, id_citas):
         conn = get_db()
         info_actual = conn.execute("""
